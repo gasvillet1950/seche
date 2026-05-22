@@ -161,7 +161,7 @@ button{font-family:var(--f);cursor:pointer;border:none;}
 </div>
 <script>
 /* ══ CONSTANTS ══ */
-const PROG_START=new Date(2026,4,26);
+const PROG_START=new Date(2026,4,25); // Lundi 25 mai — début de semaine
 const PROG_END=new Date('2026-07-14');
 const TOTAL_DAYS=Math.round((PROG_END-PROG_START)/86400000);
 const TARGET_KG=75;
@@ -179,13 +179,13 @@ const TYPES={
 
 
 const WEEKS=[
-  {n:1,dates:'26 mai – 1er juin',theme:'Semaine 1',alert:'Cheville — pas de vélo ni gainage cette semaine.'},
-  {n:2,dates:'2 – 8 juin',theme:'Semaine 2'},
-  {n:3,dates:'9 – 15 juin',theme:'Semaine 3'},
-  {n:4,dates:'16 – 22 juin',theme:'Semaine 4'},
-  {n:5,dates:'23 – 29 juin',theme:'Semaine 5'},
-  {n:6,dates:'30 juin – 6 juillet',theme:'Semaine 6'},
-  {n:7,dates:'7 – 14 juillet',theme:'Semaine 7'},
+  {n:1,dates:'25 mai – 31 mai',theme:'Semaine 1',alert:'Cheville — pas de vélo ni gainage cette semaine.'},
+  {n:2,dates:'1er – 7 juin',theme:'Semaine 2'},
+  {n:3,dates:'8 – 14 juin',theme:'Semaine 3'},
+  {n:4,dates:'15 – 21 juin',theme:'Semaine 4'},
+  {n:5,dates:'22 – 28 juin',theme:'Semaine 5'},
+  {n:6,dates:'29 juin – 5 juillet',theme:'Semaine 6'},
+  {n:7,dates:'6 – 12 juillet',theme:'Semaine 7'},
 ];
 
 const NUTRITION={
