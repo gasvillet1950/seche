@@ -1,775 +1,800 @@
-import { useState, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from "recharts";
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Sèche Été 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#F9F7F3;--card:#FFF;--brd:#DDD8CF;--brdL:#EDE8E1;
+  --t:#1A1A1A;--t2:#5C5650;--t3:#9B9590;
+  --grn:#2E7D5A;--grnBg:#F0F8F4;--grnBrd:#B8D9CB;
+  --red:#B83A2A;--redBg:#FDF2F0;--redBrd:#EAB5AC;
+  --gld:#8B6914;--gldBg:#FDF8EC;--gldBrd:#DCC87A;
+  --blu:#2B5EA7;--bluBg:#F0F4FB;--bluBrd:#B0C4E8;
+  --f:Georgia,'Times New Roman',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--f);background:var(--bg);color:var(--t);min-height:100vh;}
+button{font-family:var(--f);cursor:pointer;border:none;}
+#app{max-width:960px;margin:0 auto;padding-bottom:40px;}
 
-const PROG_START = new Date("2026-05-26");
-const PROG_END   = new Date("2026-07-14");
-const TOTAL_DAYS = Math.round((PROG_END - PROG_START) / 86400000);
-const TARGET_KG  = 77;
+/* HEADER */
+#hdr{padding:20px 20px 14px;border-bottom:1px solid var(--brd);}
+.hdr-tiny{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;}
+.hdr-h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px;}
+.hdr-sub{font-size:12px;color:var(--t2);margin-bottom:14px;}
+.prog-wrap{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.prog-bg{flex:1;height:3px;background:var(--brdL);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--grn),var(--blu));border-radius:2px;}
+.prog-lbl{font-size:10px;color:var(--t3);white-space:nowrap;}
+.stats{display:flex;gap:8px;}
+.stat{flex:1;background:var(--card);border:1px solid var(--brd);border-radius:8px;padding:9px 6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.stat-n{font-size:20px;font-weight:700;line-height:1;}
+.stat-l{font-size:9px;color:var(--t3);margin-top:3px;text-transform:uppercase;letter-spacing:.06em;}
 
-const toYMD = (d) => {
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+/* TABS */
+#tabs{display:flex;padding:14px 20px 0;gap:2px;border-bottom:1px solid var(--brd);}
+.tbtn{flex:1;padding:8px 0;background:none;border:none;border-bottom:2px solid transparent;color:var(--t3);font-size:12px;letter-spacing:.03em;transition:all .15s;}
+.tbtn.active{color:var(--grn);border-bottom-color:var(--grn);font-weight:700;}
+#content{padding:16px 20px;}
+
+/* WEEK NAV */
+.wknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.wknav-btn{background:none;border:1px solid var(--brd);border-radius:6px;width:34px;height:34px;color:var(--t2);font-size:20px;display:flex;align-items:center;justify-content:center;}
+.wknav-btn:disabled{color:var(--brdL);cursor:default;}
+.wknav-c{text-align:center;}
+.wknav-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;}
+.wknav-theme{font-size:16px;font-weight:700;letter-spacing:-.01em;margin:3px 0 2px;}
+.wknav-dates{font-size:11px;color:var(--t3);}
+.wk-badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:700;margin-left:5px;}
+.wk-badge.cur{background:var(--grn);color:#fff;}
+.wk-badge.past{background:var(--brdL);color:var(--t3);}
+.wk-alert{background:var(--redBg);border:1px solid var(--redBrd);border-radius:8px;padding:9px 14px;margin-bottom:12px;font-size:12px;color:var(--red);}
+
+/* CALENDAR */
+.cal-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--brd);border-radius:10px;background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(106px,1fr));min-width:742px;}
+.day-col{border-right:1px solid var(--brdL);min-height:220px;display:flex;flex-direction:column;transition:background .15s;}
+.day-col:last-child{border-right:none;}
+.day-col.drag-over{background:var(--grnBg)!important;}
+.day-hdr{padding:8px 6px;background:var(--bg);border-bottom:1px solid var(--brdL);text-align:center;flex-shrink:0;}
+.day-hdr-name{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);display:block;}
+.day-hdr-num{font-size:17px;font-weight:700;color:var(--t2);line-height:1.2;}
+.day-col.is-today .day-hdr{background:var(--grnBg);}
+.day-col.is-today .day-hdr-name{color:var(--grn);}
+.day-col.is-today .day-hdr-num{color:var(--grn);}
+.day-body{flex:1;padding:5px;display:flex;flex-direction:column;gap:5px;}
+
+/* SESSION BLOCKS */
+.sb{border-radius:6px;padding:6px 8px;cursor:pointer;border-left:3px solid;font-size:11px;position:relative;user-select:none;transition:filter .15s;}
+.sb:hover{filter:brightness(.95);}
+.sb.is-done{opacity:.55;}
+.sb.is-dragging{opacity:.3;}
+.sb-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;opacity:.85;margin-bottom:2px;}
+.sb-title{font-size:11px;font-weight:700;line-height:1.25;margin-bottom:1px;}
+.sb-dur{font-size:10px;opacity:.7;}
+.sb-check{position:absolute;top:5px;right:6px;font-size:11px;font-weight:700;color:var(--grn);}
+.sb.tp-muscu   {background:var(--grnBg);border-color:var(--grn);color:var(--grn);}
+.sb.tp-velo    {background:var(--bluBg);border-color:var(--blu);color:var(--blu);}
+.sb.tp-combo   {background:#FDF6F1;border-color:#7A4E2D;color:#7A4E2D;}
+.sb.tp-optional{background:var(--gldBg);border-color:var(--gld);color:var(--gld);}
+.sb.tp-foot    {background:#FDF4EC;border-color:#C05E1A;color:#C05E1A;}
+.sb.tp-run     {background:#EBF8F8;border-color:#1A7A7A;color:#1A7A7A;}
+.sb.tp-tennis  {background:#F4F0F8;border-color:#5A2E7D;color:#5A2E7D;}
+
+.add-day-btn{margin-top:auto;padding:5px;background:none;border:1px dashed var(--brd);border-radius:5px;color:var(--t3);font-size:14px;width:100%;transition:all .15s;}
+.add-day-btn:hover{border-color:var(--grn);color:var(--grn);background:var(--grnBg);}
+.ecart-btn{width:100%;margin-top:12px;padding:10px;background:var(--redBg);border:1px solid var(--redBrd);border-radius:8px;color:var(--red);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;display:block;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:200;padding:0 0 12px;}
+@media(min-width:600px){.overlay{align-items:center;}}
+#mbox{background:#fff;border-radius:14px 14px 10px 10px;padding:22px;width:93%;max-width:490px;max-height:88vh;overflow-y:auto;border:1px solid var(--brd);}
+@media(min-width:600px){#mbox{border-radius:12px;}}
+.m-close{float:right;background:none;font-size:22px;color:var(--t3);margin-top:-4px;line-height:1;}
+.m-title{font-size:16px;font-weight:700;margin-bottom:14px;color:var(--t);}
+.m-tag{display:inline-block;padding:2px 9px;border-radius:12px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;}
+.m-sess-title{font-size:20px;font-weight:700;margin-bottom:6px;line-height:1.2;}
+.m-date-row{display:flex;gap:14px;align-items:center;margin-bottom:12px;font-size:12px;color:var(--t2);}
+.m-date-link{color:var(--blu);text-decoration:underline;text-decoration-style:dotted;cursor:pointer;}
+.velo-blk{background:var(--bluBg);border:1px solid var(--bluBrd);border-radius:7px;padding:9px 12px;font-size:12px;color:var(--blu);font-style:italic;margin-bottom:12px;}
+.exo-list{margin:8px 0;}
+.exo-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin:14px 0 6px;}
+.exo-row{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--brdL);gap:8px;}
+.exo-row.dis .exo-txt{text-decoration:line-through;opacity:.4;}
+.exo-txt{flex:1;}
+.exo-n{font-size:12px;font-weight:700;color:var(--t);margin-bottom:1px;}
+.exo-d{font-size:11px;color:var(--t2);font-style:italic;}
+.exo-tog{background:none;border:1px solid var(--brd);border-radius:5px;width:26px;height:26px;font-size:11px;color:var(--t3);flex-shrink:0;}
+.exo-tog.on{border-color:var(--red);color:var(--red);}
+.m-actions{display:flex;gap:8px;margin-top:16px;}
+.btn-p{flex:1;padding:11px;background:var(--grn);border-radius:8px;color:#fff;font-size:13px;font-weight:700;}
+.btn-s{padding:11px 14px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--t2);font-size:13px;}
+.btn-d{padding:11px;background:var(--redBg);border:1px solid var(--redBrd);border-radius:8px;color:var(--red);font-size:13px;}
+.btn-done-s{background:var(--grnBg)!important;border:1px solid var(--grnBrd);color:var(--grn)!important;}
+.type-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0;}
+.type-btn{padding:10px 5px;border-radius:8px;border:1.5px solid var(--brd);background:#fff;font-size:10px;text-align:center;cursor:pointer;transition:all .15s;line-height:1.3;}
+.type-btn .ti{font-size:20px;display:block;margin-bottom:3px;}
+.days-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:10px 0;}
+.dpk{padding:7px 3px;border-radius:6px;border:1px solid var(--brd);background:#fff;font-size:9px;text-align:center;cursor:pointer;color:var(--t2);}
+.dpk.sel{border-color:var(--grn);background:var(--grnBg);color:var(--grn);font-weight:700;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;}
+.chip{padding:6px 12px;border-radius:20px;border:1px solid var(--brd);background:#fff;color:var(--t2);font-size:12px;cursor:pointer;}
+.chip.sel{border-color:var(--red);background:var(--redBg);color:var(--red);}
+.minp{width:100%;padding:9px 12px;border:1px solid var(--brd);border-radius:7px;font-size:13px;font-family:var(--f);color:var(--t);outline:none;}
+.lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px;display:block;}
+
+/* NUTRITION */
+.sec-title{font-size:10px;color:var(--t3);letter-spacing:.12em;text-transform:uppercase;margin:18px 0 10px;}
+.n-card{border-radius:9px;padding:12px 14px;margin-bottom:8px;font-size:13px;line-height:1.65;}
+
+/* POIDS */
+.wt-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--brdL);}
+.wt-wk{width:60px;flex-shrink:0;}
+.wt-wk-n{font-size:12px;font-weight:700;}
+.wt-wk-d{font-size:10px;color:var(--t3);}
+.wt-inp{width:82px;padding:7px 10px;border:1px solid var(--brd);border-radius:6px;font-size:13px;font-family:var(--f);outline:none;}
+.wt-inp.cur{border-color:var(--grnBrd);background:var(--grnBg);}
+.chart-wrap{background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:16px 8px 8px;margin-top:20px;}
+.ecart-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--brdL);font-size:12px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hdr"></header>
+  <nav id="tabs">
+    <button class="tbtn" id="tbtn-plan"  onclick="switchTab('plan')">Planning</button>
+    <button class="tbtn" id="tbtn-nutri" onclick="switchTab('nutri')">Nutrition</button>
+    <button class="tbtn" id="tbtn-poids" onclick="switchTab('poids')">Poids</button>
+  </nav>
+  <div id="content">
+    <div id="tab-plan"></div>
+    <div id="tab-nutri" hidden></div>
+    <div id="tab-poids" hidden></div>
+  </div>
+</div>
+<div id="modal" class="overlay" hidden onclick="if(event.target===this)closeModal()">
+  <div id="mbox"></div>
+</div>
+<script>
+/* ══ CONSTANTS ══ */
+const PROG_START=new Date('2026-05-26');
+const PROG_END=new Date('2026-07-14');
+const TOTAL_DAYS=Math.round((PROG_END-PROG_START)/86400000);
+const TARGET_KG=75;
+const TODAY=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})();
+
+const TYPES={
+  muscu:  {icon:'💪',label:'Musculation',col:'#2E7D5A',bg:'#F0F8F4',brd:'#B8D9CB'},
+  velo:   {icon:'🚴',label:'Cardio Vélo',col:'#2B5EA7',bg:'#F0F4FB',brd:'#B0C4E8'},
+  combo:  {icon:'⚡',label:'Combo',      col:'#7A4E2D',bg:'#FDF6F1',brd:'#E8C8A8'},
+  optional:{icon:'⭐',label:'Bonus',     col:'#8B6914',bg:'#FDF8EC',brd:'#DCC87A'},
+  foot:   {icon:'⚽',label:'Football',   col:'#C05E1A',bg:'#FDF4EC',brd:'#F0C8A0'},
+  run:    {icon:'🏃',label:'Course',     col:'#1A7A7A',bg:'#EBF8F8',brd:'#A0D8D8'},
+  tennis: {icon:'🎾',label:'Tennis',     col:'#5A2E7D',bg:'#F4F0F8',brd:'#C8B0E0'},
 };
-const TODAY = toYMD(new Date());
 
-const getCurrentWeek = () => {
-  const diff = Math.floor((new Date() - PROG_START) / 86400000);
-  if (diff < 0) return 1;
-  return Math.min(Math.floor(diff / 7) + 1, 7);
+const DEFAULT_DATES={
+  w1s1:'2026-05-26',w1s2:'2026-05-29',
+  w2s1:'2026-06-02',w2s2:'2026-06-04',w2s3:'2026-06-06',w2s4:'2026-06-07',
+  w3s1:'2026-06-09',w3s2:'2026-06-11',w3s3:'2026-06-13',w3s4:'2026-06-14',
+  w4s1:'2026-06-16',w4s2:'2026-06-18',w4s3:'2026-06-20',w4s4:'2026-06-21',
+  w5s1:'2026-06-23',w5s2:'2026-06-25',w5s3:'2026-06-27',w5s4:'2026-06-28',
+  w6s1:'2026-06-30',w6s2:'2026-07-02',w6s3:'2026-07-04',w6s4:'2026-07-05',
+  w7s1:'2026-07-07',w7s2:'2026-07-09',w7s3:'2026-07-11',
 };
 
-const fmtDate = (ymd) => {
-  if (!ymd) return "—";
-  const d = new Date(ymd + "T12:00:00");
-  return d.toLocaleDateString("fr-FR", { weekday:"short", day:"numeric", month:"short" });
-};
-
-const DEFAULT_DATES = {
-  w1s1:"2026-05-26", w1s2:"2026-05-29",
-  w2s1:"2026-06-02", w2s2:"2026-06-04", w2s3:"2026-06-06", w2s4:"2026-06-07",
-  w3s1:"2026-06-09", w3s2:"2026-06-11", w3s3:"2026-06-13", w3s4:"2026-06-14",
-  w4s1:"2026-06-16", w4s2:"2026-06-18", w4s3:"2026-06-20", w4s4:"2026-06-21",
-  w5s1:"2026-06-23", w5s2:"2026-06-25", w5s3:"2026-06-27", w5s4:"2026-06-28",
-  w6s1:"2026-06-30", w6s2:"2026-07-02", w6s3:"2026-07-04", w6s4:"2026-07-05",
-  w7s1:"2026-07-07", w7s2:"2026-07-09", w7s3:"2026-07-11",
-};
-
-const TTYPES = {
-  muscu:    { tag:"MUSCULATION", col:"#2E7D5A", bg:"#F0F8F4", brd:"#B8D9CB" },
-  velo:     { tag:"CARDIO VÉLO", col:"#2B5EA7", bg:"#F0F4FB", brd:"#B0C4E8" },
-  combo:    { tag:"COMBO",       col:"#7A4E2D", bg:"#FDF6F1", brd:"#E8C8A8" },
-  optional: { tag:"OPTIONNEL",   col:"#8B6914", bg:"#FDF8EC", brd:"#DCC87A" },
-};
-
-const ECART_OPTS = ["Boisson sucrée","Gâteau / dessert","Frites","Session ratée","Alcool en semaine","Portion excessive","Grignotage"];
-
-const WEEKS = [
-  { n:1, dates:"26 mai – 1er juin", theme:"Démarrage doux",
-    alert:"Cheville en récupération — vélo & gainage supprimés cette semaine.",
-    sessions:[
-      { id:"w1s1", type:"muscu", title:"Upper Body A", dur:35, exercises:[
-        {n:"Développé haltères (sol)",   d:"3 × 10 — Pectoraux. Allongé sur tapis, coudes à 45°, pause en bas."},
-        {n:"Écarté haltères (sol)",      d:"3 × 12 — Pectoraux. Mouvement lent, étirement complet en bas."},
-        {n:"Rowing haltère 1 bras",     d:"3 × 10 / côté — Dos. Appui genou + main sur chaise."},
-        {n:"Curl biceps haltères",      d:"3 × 12 — Sans élan. Contraction au sommet, descente lente."},
-        {n:"Élévations latérales",      d:"3 × 15 léger — Épaules. Coudes légèrement fléchis."},
-      ]},
-      { id:"w1s2", type:"muscu", title:"Upper Body B + Abdos", dur:40, exercises:[
-        {n:"Développé haltères (sol)",   d:"3 × 10"},
-        {n:"Extension triceps haltère",  d:"3 × 12 — Derrière la tête, coude fixe."},
-        {n:"Rowing haltère 1 bras",     d:"3 × 10 / côté"},
-        {n:"Crunches",                  d:"3 × 20 — Compression du ventre, nuque relâchée."},
-        {n:"Leg raises",                d:"3 × 15 — Jambes tendues, montée lente."},
-        {n:"Bicycle crunches",          d:"3 × 20 — Rotation lente et contrôlée."},
-      ]},
+const WEEKS=[
+  {n:1,dates:'26 mai – 1er juin',theme:'Démarrage doux',
+   alert:'Cheville en récupération — vélo & gainage supprimés.',
+   sessions:[
+    {id:'w1s1',type:'muscu',title:'Upper Body A',dur:35,exercises:[
+      {n:'Développé haltères (sol)',d:'3×10 — Pectoraux. Coudes à 45°, pause en bas.'},
+      {n:'Écarté haltères (sol)',d:'3×12 — Pectoraux. Mouvement lent, étirement complet.'},
+      {n:'Rowing haltère 1 bras',d:'3×10/côté — Dos. Appui genou sur chaise.'},
+      {n:'Curl biceps haltères',d:'3×12 — Sans élan. Contraction au sommet.'},
+      {n:'Élévations latérales',d:'3×15 léger — Épaules. Coudes légèrement fléchis.'},
     ]},
-  { n:2, dates:"2 – 8 juin", theme:"Programme complet",
-    sessions:[
-      { id:"w2s1", type:"combo", title:"Vélo + Upper Body", dur:60,
-        velo:"25 min — Intervalles : 2 min rapide / 1 min modéré × 8. Finir avec 3 min récup.",
-        exercises:[
-          {n:"Développé haltères (sol)",  d:"3 × 10"},
-          {n:"Écarté haltères (sol)",     d:"3 × 12"},
-          {n:"Rowing haltère 1 bras",    d:"3 × 10 / côté"},
-          {n:"Curl biceps",              d:"3 × 12"},
-          {n:"Extension triceps",        d:"3 × 12"},
-        ]},
-      { id:"w2s2", type:"muscu", title:"Lower Body + Abdos", dur:45, exercises:[
-        {n:"Squat haltères",            d:"3 × 12 — Dos droit, descente à 90°."},
-        {n:"Fentes avant",              d:"3 × 10 / côté — Grand pas, genou arrière proche sol."},
-        {n:"Hip thrust haltère",        d:"3 × 15 — Dos sur canapé, poussée explosive des hanches."},
-        {n:"Gainage planche",           d:"3 × 30 sec — Dos plat, respiration normale."},
-        {n:"Crunches",                  d:"3 × 20"},
-        {n:"Russian twist haltère",     d:"3 × 15 / côté"},
-      ]},
-      { id:"w2s3", type:"velo",  title:"Vélo Zone 2", dur:30,
-        velo:"30 min régulier — Intensité où tu peux encore parler. Optimal brûle-graisses." },
-      { id:"w2s4", type:"optional", title:"Session Bonus (optionnel)", dur:25, exercises:[
-        {n:"Élévations latérales",      d:"3 × 15"},
-        {n:"Écarté haltères (sol)",     d:"3 × 12"},
-        {n:"Bicycle crunches",          d:"3 × 20"},
-        {n:"Leg raises",                d:"3 × 15"},
-      ]},
+    {id:'w1s2',type:'muscu',title:'Upper Body B + Abdos',dur:40,exercises:[
+      {n:'Développé haltères (sol)',d:'3×10'},
+      {n:'Extension triceps haltère',d:'3×12 — Derrière la tête, coude fixe.'},
+      {n:'Rowing haltère 1 bras',d:'3×10/côté'},
+      {n:'Crunches',d:'3×20 — Compression, nuque relâchée.'},
+      {n:'Leg raises',d:'3×15 — Jambes tendues, montée lente.'},
+      {n:'Bicycle crunches',d:'3×20 — Rotation lente et contrôlée.'},
     ]},
-  { n:3, dates:"9 – 15 juin", theme:"Intensification légère",
-    sessions:[
-      { id:"w3s1", type:"combo", title:"Vélo + Upper Body", dur:65,
-        velo:"30 min — 2 min rapide / 1 min modéré × 9.",
-        exercises:[
-          {n:"Développé haltères (sol)",  d:"4 × 10 (+1 série vs S2)"},
-          {n:"Écarté haltères (sol)",     d:"3 × 12"},
-          {n:"Rowing haltère 1 bras",    d:"4 × 10 / côté"},
-          {n:"Curl biceps",              d:"3 × 12"},
-          {n:"Élévations latérales",     d:"3 × 15"},
-        ]},
-      { id:"w3s2", type:"muscu", title:"Lower Body + Abdos", dur:50, exercises:[
-        {n:"Squat haltères",            d:"4 × 12"},
-        {n:"Fentes avant",              d:"3 × 12 / côté"},
-        {n:"Hip thrust haltère",        d:"4 × 15 — Essayer d'augmenter le poids."},
-        {n:"Romanian deadlift",         d:"3 × 12 — Dos plat, descente lente sur ischios."},
-        {n:"Gainage planche",           d:"3 × 40 sec"},
-        {n:"Leg raises",                d:"3 × 15"},
-        {n:"Russian twist",             d:"3 × 15 / côté"},
-      ]},
-      { id:"w3s3", type:"velo",  title:"Vélo + Abdos express", dur:40,
-        velo:"25 min zone 2",
-        exercises:[
-          {n:"Crunches",                d:"3 × 25"},
-          {n:"Bicycle crunches",        d:"3 × 20"},
-          {n:"Gainage",                 d:"2 × 40 sec"},
-        ]},
-      { id:"w3s4", type:"optional", title:"Session Bonus", dur:30, exercises:[
-        {n:"Squat haltères",            d:"3 × 15"},
-        {n:"Hip thrust",                d:"3 × 15"},
-        {n:"Crunches",                  d:"3 × 25"},
-        {n:"Bicycle crunches",          d:"3 × 20"},
-      ]},
+  ]},
+  {n:2,dates:'2 – 8 juin',theme:'Programme complet',sessions:[
+    {id:'w2s1',type:'combo',title:'Vélo + Upper Body',dur:60,
+     velo:'25 min — 2 min rapide / 1 min modéré ×8. Finir avec 3 min récup.',
+     exercises:[
+      {n:'Développé haltères (sol)',d:'3×10'},
+      {n:'Écarté haltères (sol)',d:'3×12'},
+      {n:'Rowing haltère 1 bras',d:'3×10/côté'},
+      {n:'Curl biceps',d:'3×12'},
+      {n:'Extension triceps',d:'3×12'},
     ]},
-  { n:4, dates:"16 – 22 juin", theme:"Mi-programme",
-    sessions:[
-      { id:"w4s1", type:"combo", title:"Vélo HIIT + Pecto/Dos", dur:70,
-        velo:"30 min HIIT — 1 min max / 1 min récup × 10, puis 10 min retour calme.",
-        exercises:[
-          {n:"Développé haltères (sol)",  d:"4 × 12"},
-          {n:"Écarté haltères (sol)",     d:"4 × 12"},
-          {n:"Rowing haltère 1 bras",    d:"4 × 12 / côté"},
-          {n:"Extension triceps",        d:"3 × 12"},
-        ]},
-      { id:"w4s2", type:"muscu", title:"Cuisses + Abdos complet", dur:55, exercises:[
-        {n:"Squat haltères",            d:"4 × 12 — Augmenter le poids si possible."},
-        {n:"Fentes avant",              d:"4 × 10 / côté"},
-        {n:"Hip thrust haltère",        d:"4 × 15"},
-        {n:"Romanian deadlift",         d:"3 × 12"},
-        {n:"Gainage planche",           d:"4 × 45 sec"},
-        {n:"Leg raises",                d:"4 × 15"},
-        {n:"Russian twist",             d:"3 × 20 / côté"},
-        {n:"Bicycle crunches",          d:"3 × 20"},
-      ]},
-      { id:"w4s3", type:"velo",  title:"Vélo endurance", dur:35, velo:"35 min zone 2 continu." },
-      { id:"w4s4", type:"optional", title:"Session Bonus", dur:35, exercises:[
-        {n:"Écarté haltères (sol)",     d:"4 × 12"},
-        {n:"Curl biceps",               d:"3 × 12"},
-        {n:"Élévations latérales",      d:"3 × 15"},
-        {n:"Circuit abdos",             d:"3 tours : gainage 30s + leg raises 15 + bicycle 20"},
-      ]},
+    {id:'w2s2',type:'muscu',title:'Lower Body + Abdos',dur:45,exercises:[
+      {n:'Squat haltères',d:'3×12 — Dos droit, descente à 90°.'},
+      {n:'Fentes avant',d:'3×10/côté — Grand pas, genou arrière proche sol.'},
+      {n:'Hip thrust haltère',d:'3×15 — Dos sur canapé, poussée explosive.'},
+      {n:'Gainage planche',d:'3×30 sec — Dos plat.'},
+      {n:'Crunches',d:'3×20'},
+      {n:'Russian twist haltère',d:'3×15/côté'},
     ]},
-  { n:5, dates:"23 – 29 juin", theme:"Sèche intensive",
-    sessions:[
-      { id:"w5s1", type:"combo", title:"Vélo HIIT + Full Upper", dur:70,
-        velo:"30 min HIIT — 1 min max / 1 min récup × 10.",
-        exercises:[
-          {n:"Développé haltères (sol)",  d:"4 × 12"},
-          {n:"Écarté haltères (sol)",     d:"4 × 12"},
-          {n:"Rowing haltère 1 bras",    d:"4 × 12 / côté"},
-          {n:"Curl biceps",              d:"3 × 12"},
-          {n:"Extension triceps",        d:"3 × 12"},
-          {n:"Élévations latérales",     d:"3 × 15"},
-        ]},
-      { id:"w5s2", type:"muscu", title:"Lower Body + Abdos", dur:55, exercises:[
-        {n:"Squat haltères",            d:"4 × 15 — Endurance force."},
-        {n:"Fentes marchées",           d:"3 × 10 / côté — En marchant dans la pièce."},
-        {n:"Hip thrust haltère",        d:"4 × 20"},
-        {n:"Romanian deadlift",         d:"4 × 12"},
-        {n:"Gainage planche",           d:"4 × 50 sec"},
-        {n:"Leg raises",                d:"4 × 15"},
-        {n:"Russian twist",             d:"4 × 20 / côté"},
-      ]},
-      { id:"w5s3", type:"velo",  title:"Vélo endurance", dur:40, velo:"40 min zone 2." },
-      { id:"w5s4", type:"optional", title:"Circuit Bonus", dur:35, exercises:[
-        {n:"Circuit full body",         d:"4 rounds : Squat ×15 / Hip thrust ×15 / Développé ×12 / Abdos ×20"},
-      ]},
+    {id:'w2s3',type:'velo',title:'Vélo Zone 2',dur:30,
+     velo:'30 min régulier — Intensité où tu peux encore parler.'},
+    {id:'w2s4',type:'optional',title:'Session Bonus',dur:25,exercises:[
+      {n:'Élévations latérales',d:'3×15'},
+      {n:'Écarté haltères (sol)',d:'3×12'},
+      {n:'Bicycle crunches',d:'3×20'},
+      {n:'Leg raises',d:'3×15'},
     ]},
-  { n:6, dates:"30 juin – 6 juillet", theme:"Peak",
-    sessions:[
-      { id:"w6s1", type:"combo", title:"Vélo Max + Upper", dur:75,
-        velo:"35 min HIIT — 1 min max / 45 sec récup × 15.",
-        exercises:[
-          {n:"Développé haltères (sol)",  d:"5 × 10"},
-          {n:"Écarté haltères (sol)",     d:"4 × 12"},
-          {n:"Rowing haltère 1 bras",    d:"4 × 12 / côté"},
-          {n:"Curl biceps",              d:"3 × 12"},
-          {n:"Extension triceps",        d:"3 × 12"},
-        ]},
-      { id:"w6s2", type:"muscu", title:"Cuisses/Fessiers + Abdos max", dur:60, exercises:[
-        {n:"Squat haltères",            d:"5 × 12 — Charge maximale."},
-        {n:"Fentes marchées",           d:"3 × 12 / côté"},
-        {n:"Hip thrust haltère",        d:"5 × 15 — Charge maximale."},
-        {n:"Romanian deadlift",         d:"4 × 12"},
-        {n:"Gainage planche",           d:"4 × 60 sec"},
-        {n:"Leg raises",                d:"4 × 20"},
-        {n:"Russian twist",             d:"4 × 20 / côté"},
-        {n:"Bicycle crunches",          d:"4 × 25"},
-      ]},
-      { id:"w6s3", type:"velo",  title:"Vélo endurance finale", dur:40, velo:"40 min zone 2." },
-      { id:"w6s4", type:"optional", title:"Circuit Sèche", dur:40, exercises:[
-        {n:"Circuit intensif",          d:"5 rounds : Squat ×15 / Hip thrust ×20 / Développé ×10 / Gainage 45s / Leg raises ×15"},
-      ]},
+  ]},
+  {n:3,dates:'9 – 15 juin',theme:'Intensification légère',sessions:[
+    {id:'w3s1',type:'combo',title:'Vélo + Upper Body',dur:65,
+     velo:'30 min — 2 min rapide / 1 min modéré ×9.',
+     exercises:[
+      {n:'Développé haltères (sol)',d:'4×10 (+1 série vs S2)'},
+      {n:'Écarté haltères (sol)',d:'3×12'},
+      {n:'Rowing haltère 1 bras',d:'4×10/côté'},
+      {n:'Curl biceps',d:'3×12'},
+      {n:'Élévations latérales',d:'3×15'},
     ]},
-  { n:7, dates:"7 – 14 juillet", theme:"Finition",
-    sessions:[
-      { id:"w7s1", type:"combo", title:"Vélo + Full Upper", dur:65,
-        velo:"30 min HIIT.",
-        exercises:[
-          {n:"Développé haltères (sol)",  d:"4 × 12"},
-          {n:"Écarté haltères (sol)",     d:"4 × 12"},
-          {n:"Rowing haltère 1 bras",    d:"4 × 12 / côté"},
-          {n:"Curl biceps",              d:"3 × 12"},
-          {n:"Extension triceps",        d:"3 × 12"},
-        ]},
-      { id:"w7s2", type:"muscu", title:"Full Body + Abdos final", dur:55, exercises:[
-        {n:"Squat haltères",            d:"4 × 15"},
-        {n:"Hip thrust haltère",        d:"4 × 20"},
-        {n:"Développé haltères (sol)",  d:"3 × 12"},
-        {n:"Rowing haltère 1 bras",    d:"3 × 12 / côté"},
-        {n:"Gainage planche",           d:"4 × 60 sec"},
-        {n:"Leg raises",                d:"4 × 20"},
-        {n:"Bicycle crunches",          d:"4 × 25"},
-      ]},
-      { id:"w7s3", type:"velo",  title:"Dernier Vélo", dur:35, velo:"35 min zone 2." },
+    {id:'w3s2',type:'muscu',title:'Lower Body + Abdos',dur:50,exercises:[
+      {n:'Squat haltères',d:'4×12'},
+      {n:'Fentes avant',d:'3×12/côté'},
+      {n:'Hip thrust haltère',d:'4×15 — Augmenter le poids.'},
+      {n:'Romanian deadlift',d:'3×12 — Dos plat.'},
+      {n:'Gainage planche',d:'3×40 sec'},
+      {n:'Leg raises',d:'3×15'},
+      {n:'Russian twist',d:'3×15/côté'},
     ]},
+    {id:'w3s3',type:'velo',title:'Vélo + Abdos express',dur:40,
+     velo:'25 min zone 2',
+     exercises:[
+      {n:'Crunches',d:'3×25'},
+      {n:'Bicycle crunches',d:'3×20'},
+      {n:'Gainage',d:'2×40 sec'},
+    ]},
+    {id:'w3s4',type:'optional',title:'Session Bonus',dur:30,exercises:[
+      {n:'Squat haltères',d:'3×15'},
+      {n:'Hip thrust',d:'3×15'},
+      {n:'Crunches',d:'3×25'},
+      {n:'Bicycle crunches',d:'3×20'},
+    ]},
+  ]},
+  {n:4,dates:'16 – 22 juin',theme:'Mi-programme',sessions:[
+    {id:'w4s1',type:'combo',title:'Vélo HIIT + Pecto/Dos',dur:70,
+     velo:'30 min HIIT — 1 min max / 1 min récup ×10, puis 10 min retour calme.',
+     exercises:[
+      {n:'Développé haltères (sol)',d:'4×12'},
+      {n:'Écarté haltères (sol)',d:'4×12'},
+      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
+      {n:'Extension triceps',d:'3×12'},
+    ]},
+    {id:'w4s2',type:'muscu',title:'Cuisses + Abdos complet',dur:55,exercises:[
+      {n:'Squat haltères',d:'4×12 — Augmenter le poids.'},
+      {n:'Fentes avant',d:'4×10/côté'},
+      {n:'Hip thrust haltère',d:'4×15'},
+      {n:'Romanian deadlift',d:'3×12'},
+      {n:'Gainage planche',d:'4×45 sec'},
+      {n:'Leg raises',d:'4×15'},
+      {n:'Russian twist',d:'3×20/côté'},
+      {n:'Bicycle crunches',d:'3×20'},
+    ]},
+    {id:'w4s3',type:'velo',title:'Vélo endurance',dur:35,velo:'35 min zone 2 continu.'},
+    {id:'w4s4',type:'optional',title:'Session Bonus',dur:35,exercises:[
+      {n:'Écarté haltères (sol)',d:'4×12'},
+      {n:'Curl biceps',d:'3×12'},
+      {n:'Élévations latérales',d:'3×15'},
+      {n:'Circuit abdos',d:'3 tours : gainage 30s + leg raises 15 + bicycle 20'},
+    ]},
+  ]},
+  {n:5,dates:'23 – 29 juin',theme:'Sèche intensive',sessions:[
+    {id:'w5s1',type:'combo',title:'Vélo HIIT + Full Upper',dur:70,
+     velo:'30 min HIIT — 1 min max / 1 min récup ×10.',
+     exercises:[
+      {n:'Développé haltères (sol)',d:'4×12'},
+      {n:'Écarté haltères (sol)',d:'4×12'},
+      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
+      {n:'Curl biceps',d:'3×12'},
+      {n:'Extension triceps',d:'3×12'},
+      {n:'Élévations latérales',d:'3×15'},
+    ]},
+    {id:'w5s2',type:'muscu',title:'Lower Body + Abdos',dur:55,exercises:[
+      {n:'Squat haltères',d:'4×15 — Endurance force.'},
+      {n:'Fentes marchées',d:'3×10/côté'},
+      {n:'Hip thrust haltère',d:'4×20'},
+      {n:'Romanian deadlift',d:'4×12'},
+      {n:'Gainage planche',d:'4×50 sec'},
+      {n:'Leg raises',d:'4×15'},
+      {n:'Russian twist',d:'4×20/côté'},
+    ]},
+    {id:'w5s3',type:'velo',title:'Vélo endurance',dur:40,velo:'40 min zone 2.'},
+    {id:'w5s4',type:'optional',title:'Circuit Bonus',dur:35,exercises:[
+      {n:'Circuit full body',d:'4 rounds : Squat×15 / Hip thrust×15 / Développé×12 / Abdos×20'},
+    ]},
+  ]},
+  {n:6,dates:'30 juin – 6 juillet',theme:'Peak',sessions:[
+    {id:'w6s1',type:'combo',title:'Vélo Max + Upper',dur:75,
+     velo:'35 min HIIT — 1 min max / 45 sec récup ×15.',
+     exercises:[
+      {n:'Développé haltères (sol)',d:'5×10'},
+      {n:'Écarté haltères (sol)',d:'4×12'},
+      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
+      {n:'Curl biceps',d:'3×12'},
+      {n:'Extension triceps',d:'3×12'},
+    ]},
+    {id:'w6s2',type:'muscu',title:'Cuisses/Fessiers + Abdos max',dur:60,exercises:[
+      {n:'Squat haltères',d:'5×12 — Charge maximale.'},
+      {n:'Fentes marchées',d:'3×12/côté'},
+      {n:'Hip thrust haltère',d:'5×15 — Charge maximale.'},
+      {n:'Romanian deadlift',d:'4×12'},
+      {n:'Gainage planche',d:'4×60 sec'},
+      {n:'Leg raises',d:'4×20'},
+      {n:'Russian twist',d:'4×20/côté'},
+      {n:'Bicycle crunches',d:'4×25'},
+    ]},
+    {id:'w6s3',type:'velo',title:'Vélo endurance finale',dur:40,velo:'40 min zone 2.'},
+    {id:'w6s4',type:'optional',title:'Circuit Sèche',dur:40,exercises:[
+      {n:'Circuit intensif',d:'5 rounds : Squat×15 / Hip thrust×20 / Développé×10 / Gainage 45s / Leg raises×15'},
+    ]},
+  ]},
+  {n:7,dates:'7 – 14 juillet',theme:'Finition',sessions:[
+    {id:'w7s1',type:'combo',title:'Vélo + Full Upper',dur:65,velo:'30 min HIIT.',exercises:[
+      {n:'Développé haltères (sol)',d:'4×12'},
+      {n:'Écarté haltères (sol)',d:'4×12'},
+      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
+      {n:'Curl biceps',d:'3×12'},
+      {n:'Extension triceps',d:'3×12'},
+    ]},
+    {id:'w7s2',type:'muscu',title:'Full Body + Abdos final',dur:55,exercises:[
+      {n:'Squat haltères',d:'4×15'},
+      {n:'Hip thrust haltère',d:'4×20'},
+      {n:'Développé haltères (sol)',d:'3×12'},
+      {n:'Rowing haltère 1 bras',d:'3×12/côté'},
+      {n:'Gainage planche',d:'4×60 sec'},
+      {n:'Leg raises',d:'4×20'},
+      {n:'Bicycle crunches',d:'4×25'},
+    ]},
+    {id:'w7s3',type:'velo',title:'Dernier Vélo',dur:35,velo:'35 min zone 2.'},
+  ]},
 ];
 
-const NUTRITION = {
+const NUTRITION={
   stop:[
-    { item:"Boissons sucrées", rep:"Eau plate, pétillante, café/thé sans sucre", kcal:"200–300 kcal/j" },
-    { item:"Gâteau midi au boulot", rep:"Fruit ou carré de chocolat noir (70%+)", kcal:"300–400 kcal" },
-    { item:"Frites au boulot", rep:"Salade, légumes, ou refus simple", kcal:"400–500 kcal" },
-    { item:"Dessert sucré le soir", rep:"Yaourt nature 0% si besoin, sinon rien", kcal:"150–200 kcal" },
+    {item:'Boissons sucrées',rep:'Eau plate, pétillante, café/thé sans sucre',kcal:'200–300 kcal/j'},
+    {item:'Gâteau midi au boulot',rep:'Fruit ou carré de chocolat noir 70%+',kcal:'300–400 kcal'},
+    {item:'Frites au boulot',rep:'Salade, légumes, ou refus simple',kcal:'400–500 kcal'},
+    {item:'Dessert sucré le soir',rep:'Yaourt nature 0% si besoin, sinon rien',kcal:'150–200 kcal'},
   ],
   reduce:[
-    "Pâtes / riz — max 80 g secs (≈ 1 poignée). Compenser avec plus de légumes.",
-    "Portions — assiette à 80%, attendre 10 min avant de resservir.",
-    "Alcool weekend — compenser le lundi avec repas ultra-propre (légumes + protéines, pas de féculents).",
+    'Pâtes / riz — max 80 g secs (≈ 1 poignée). Compenser avec plus de légumes.',
+    'Portions — assiette à 80%, attendre 10 min avant de resservir.',
+    'Alcool weekend — compenser le lundi avec repas ultra-propre (légumes + protéines, pas de féculents).',
   ],
   keep:[
-    "Pas de petit-déjeuner → fenêtre de jeûne naturelle ~16 h. Ne pas briser ça.",
-    "Viandes maigres & poisson le soir → maintien de la masse musculaire.",
-    "Légumes sans limite → fibre, volume, satiété.",
-    "Eau : 1,5–2 L/jour minimum, surtout le matin.",
+    'Pas de petit-déjeuner → fenêtre de jeûne naturelle ~16 h. Ne pas briser ça.',
+    'Viandes maigres & poisson le soir → maintien de la masse musculaire.',
+    'Légumes sans limite → fibre, volume, satiété.',
+    'Eau : 1,5–2 L/jour minimum, surtout le matin.',
   ],
 };
 
-const st = {
-  save: async (k, v) => { try { await window.storage.set(k, JSON.stringify(v)); } catch {} },
-  load: async (k, def) => { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : def; } catch { return def; } },
-};
+const ECART_OPTS=['Boisson sucrée','Gâteau / dessert','Frites','Session ratée','Alcool en semaine','Portion excessive','Grignotage'];
 
-const C = {
-  bg:"#F9F7F3", card:"#FFFFFF", brd:"#DDD8CF", brdL:"#EDE8E1",
-  t:"#1A1A1A", t2:"#5C5650", t3:"#9B9590",
-  grn:"#2E7D5A", grnBg:"#F0F8F4", grnBrd:"#B8D9CB",
-  red:"#B83A2A", redBg:"#FDF2F0", redBrd:"#EAB5AC",
-  gld:"#8B6914", gldBg:"#FDF8EC", gldBrd:"#DCC87A",
-  blu:"#2B5EA7", bluBg:"#F0F4FB", bluBrd:"#B0C4E8",
-};
+/* ══ STATE ══ */
+let S={currentWeek:1,done:{},sessionDates:{},ecarts:[],weights:{},disabledExos:{},customSessions:[]};
 
-const font = "Georgia, 'Times New Roman', serif";
+function loadS(){try{const s=localStorage.getItem('seche2026');if(s)Object.assign(S,JSON.parse(s));}catch(e){}}
+function saveS(){try{localStorage.setItem('seche2026',JSON.stringify(S));}catch(e){}}
 
-export default function FitnessApp() {
-  const [loaded, setLoaded]     = useState(false);
-  const [tab, setTab]           = useState("programme");
-  const [activeWeek, setActiveWeek] = useState(() => Math.max(1, getCurrentWeek()));
-  const [done, setDone]         = useState({});
-  const [sessDate, setSessDate] = useState({});
-  const [ecarts, setEcarts]     = useState([]);
-  const [weights, setWeights]   = useState({});
-  const [bonus, setBonus]       = useState({});
-  const [expanded, setExpanded] = useState(null);
-  const [ecartModal, setEcartModal] = useState(false);
-  const [ecartType, setEcartType]   = useState(ECART_OPTS[0]);
-  const [ecartNote, setEcartNote]   = useState("");
-  const [dateModal, setDateModal]   = useState(null);
-  const [dateVal, setDateVal]       = useState("");
-  const [bonusModal, setBonusModal] = useState(null);
-  const [bonusNote, setBonusNote]   = useState("");
-  const [wtInput, setWtInput]       = useState({});
-  const [aiText, setAiText]         = useState("");
-  const [aiLoad, setAiLoad]         = useState(false);
+/* ══ HELPERS ══ */
+function toYMD(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function fmtDate(ymd){if(!ymd)return '—';const d=new Date(ymd+'T12:00:00');return d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'});}
 
-  useEffect(() => {
-    (async () => {
-      const [d, sd, e, w, b] = await Promise.all([
-        st.load("fit2_done",{}), st.load("fit2_dates",{}),
-        st.load("fit2_ecarts",[]), st.load("fit2_weights",{}), st.load("fit2_bonus",{}),
-      ]);
-      setDone(d); setSessDate(sd); setEcarts(e); setWeights(w); setBonus(b);
-      setWtInput(Object.fromEntries(Object.entries(w).map(([k,v])=>[k,String(v)])));
-      setLoaded(true);
-    })();
-  }, []);
+function getCurrentWeek(){
+  const diff=Math.floor((new Date()-PROG_START)/86400000);
+  if(diff<0)return 1;
+  return Math.min(Math.floor(diff/7)+1,7);
+}
 
-  useEffect(() => { if (loaded) st.save("fit2_done", done); }, [done, loaded]);
-  useEffect(() => { if (loaded) st.save("fit2_dates", sessDate); }, [sessDate, loaded]);
-  useEffect(() => { if (loaded) st.save("fit2_ecarts", ecarts); }, [ecarts, loaded]);
-  useEffect(() => { if (loaded) st.save("fit2_weights", weights); }, [weights, loaded]);
-  useEffect(() => { if (loaded) st.save("fit2_bonus", bonus); }, [bonus, loaded]);
+function getWeekDates(wn){
+  const start=new Date(PROG_START);
+  start.setDate(start.getDate()+(wn-1)*7);
+  return Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d;});
+}
 
-  const getDate = (id) => sessDate[id] || DEFAULT_DATES[id] || "";
-  const curWeek = getCurrentWeek();
-  const todayOff = Math.floor((new Date() - PROG_START) / 86400000);
-  const pct = Math.max(0, Math.min(100, Math.round(todayOff / TOTAL_DAYS * 100)));
-  const todaySess = WEEKS.flatMap(w => w.sessions).filter(s => getDate(s.id) === TODAY);
-  const totalPl = WEEKS.reduce((a,w) => a + w.sessions.filter(s=>s.type!=="optional").length, 0);
-  const totalDn = Object.values(done).filter(Boolean).length;
+function getSD(id){return S.sessionDates[id]||DEFAULT_DATES[id]||'';}
+function getAllPS(){return WEEKS.flatMap(w=>w.sessions);}
+function getSessions4Date(ds){
+  return [...getAllPS().filter(s=>getSD(s.id)===ds),...S.customSessions.filter(s=>s.date===ds)];
+}
+function findSess(id){
+  if(String(id).startsWith('c_'))return S.customSessions.find(s=>s.id===id);
+  return getAllPS().find(s=>s.id===id);
+}
+function totalPl(){return WEEKS.reduce((a,w)=>a+w.sessions.filter(s=>s.type!=='optional').length,0);}
+function totalDn(){return Object.values(S.done).filter(Boolean).length;}
 
-  const toggleDone = (id) => setDone(p => ({...p,[id]:!p[id]}));
+/* ══ DRAG & DROP ══ */
+let dragId=null;
 
-  const submitEcart = () => {
-    setEcarts(p => [...p, {type:ecartType, note:ecartNote.trim(), date:TODAY}]);
-    setEcartModal(false); setEcartNote("");
-  };
+function onDS(e,id){
+  dragId=id;
+  e.dataTransfer.effectAllowed='move';
+  setTimeout(()=>{const el=document.querySelector(`[data-id="${id}"]`);if(el)el.classList.add('is-dragging');},0);
+}
+function onDE(e){
+  document.querySelectorAll('.sb').forEach(el=>el.classList.remove('is-dragging'));
+  document.querySelectorAll('.day-col').forEach(el=>el.classList.remove('drag-over'));
+}
+function onDO(e,ds){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('drag-over');}
+function onDL(e){e.currentTarget.classList.remove('drag-over');}
+function onDrop(e,ds){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(!dragId)return;
+  moveTo(dragId,ds);dragId=null;
+}
+function moveTo(id,nd){
+  if(String(id).startsWith('c_')){const s=S.customSessions.find(x=>x.id===id);if(s)s.date=nd;}
+  else S.sessionDates[id]=nd;
+  saveS();renderCal();
+}
 
-  const submitDate = () => {
-    if (dateVal && dateModal) setSessDate(p => ({...p,[dateModal]:dateVal}));
-    setDateModal(null);
-  };
+/* ══ RENDER HEADER ══ */
+function renderHdr(){
+  const off=Math.floor((new Date()-PROG_START)/86400000);
+  const pct=Math.max(0,Math.min(100,Math.round(off/TOTAL_DAYS*100)));
+  const dn=totalDn(),pl=totalPl(),cw=getCurrentWeek();
+  document.getElementById('hdr').innerHTML=`
+    <div class="hdr-tiny">Programme personnel · Été 2026</div>
+    <div class="hdr-h1">Sèche &amp; Tonus</div>
+    <div class="hdr-sub">22 ans · 1 m 91 · Départ 80 kg · 26 mai → 14 juillet</div>
+    <div class="prog-wrap">
+      <div class="prog-bg"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <span class="prog-lbl">J.${Math.max(0,off+1)} / ${TOTAL_DAYS}</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-n" style="color:#2E7D5A">${dn}</div><div class="stat-l">Faites</div></div>
+      <div class="stat"><div class="stat-n" style="color:#5C5650">${pl-dn}</div><div class="stat-l">Restantes</div></div>
+      <div class="stat"><div class="stat-n" style="color:${S.ecarts.length>6?'#B83A2A':'#8B6914'}">${S.ecarts.length}</div><div class="stat-l">Écarts</div></div>
+      <div class="stat"><div class="stat-n" style="color:#2B5EA7">S${cw}/7</div><div class="stat-l">Semaine</div></div>
+    </div>`;
+}
 
-  const submitBonus = () => {
-    if (bonusModal) setBonus(p => ({...p,[bonusModal]:{note:bonusNote.trim(),date:TODAY}}));
-    setBonusModal(null); setBonusNote("");
-  };
+/* ══ RENDER CALENDAR ══ */
+function renderCal(){
+  const wk=S.currentWeek,wkD=WEEKS[wk-1],cw=getCurrentWeek(),dates=getWeekDates(wk);
+  let h=`
+    <div class="wknav">
+      <button class="wknav-btn" onclick="chWk(-1)" ${wk<=1?'disabled':''}>&#8249;</button>
+      <div class="wknav-c">
+        <div class="wknav-lbl">Semaine ${wk} / 7
+          ${wk===cw?'<span class="wk-badge cur">EN COURS</span>':''}
+          ${wk<cw?'<span class="wk-badge past">PASSÉE</span>':''}
+        </div>
+        <div class="wknav-theme">${wkD.theme}</div>
+        <div class="wknav-dates">${wkD.dates}</div>
+      </div>
+      <button class="wknav-btn" onclick="chWk(1)" ${wk>=7?'disabled':''}>&#8250;</button>
+    </div>
+    ${wkD.alert?`<div class="wk-alert">⚠ ${wkD.alert}</div>`:''}
+    <div class="cal-scroll"><div class="cal-grid">`;
 
-  const saveWeight = (wn) => {
-    const v = parseFloat(wtInput[wn]);
-    if (!isNaN(v) && v > 40 && v < 200) setWeights(p => ({...p,[wn]:v}));
-  };
-
-  const chartData = WEEKS.map(w => ({
-    name:`S${w.n}`, poids: weights[w.n] ?? null, objectif: TARGET_KG,
-  }));
-
-  const lastWeightEntry = Object.keys(weights).length > 0
-    ? weights[Math.max(...Object.keys(weights).map(Number))]
-    : null;
-
-  const recalibrate = async () => {
-    setAiLoad(true); setAiText(""); setTab("ia");
-    const bilan = WEEKS.map(w => {
-      const pl = w.sessions.filter(s=>s.type!=="optional");
-      const dn = pl.filter(s=>done[s.id]).length;
-      const bn = w.sessions.filter(s=>bonus[s.id]).length;
-      const wt = weights[w.n] ? `${weights[w.n]} kg` : "non pesé";
-      return `S${w.n} (${w.dates}) : ${dn}/${pl.length} séances · Bonus:${bn} · Poids:${wt}`;
-    }).join("\n");
-    const ecartList = ecarts.length > 0
-      ? ecarts.slice(-20).map(e=>`- ${e.date} : ${e.type}${e.note?` (${e.note})`:""}`).join("\n")
-      : "Aucun écart enregistré.";
-    const wtEvol = Object.entries(weights).sort((a,b)=>+a[0]-+b[0]).map(([w,kg])=>`S${w}:${kg}kg`).join(", ") || "Aucun poids.";
-    const prompt = `Tu es un coach sportif et nutrition expert. Analyse ce bilan et réponds directement, sans flatterie.
-
-PROFIL : Homme 22 ans, 1m91, 80 kg départ, objectif sèche ventre/cuisses + tonus pecto/abdo. Programme 26 mai–14 juil 2026. Matériel : haltères, tapis, vélo. S1 : cheville blessée.
-
-SÉANCES :
-${bilan}
-
-ÉCARTS (20 derniers) :
-${ecartList}
-
-POIDS : ${wtEvol}
-Objectif : ${TARGET_KG} kg. Semaine actuelle : S${curWeek}/7.
-
-RÉPONDS EN 4 BLOCS EXACTEMENT :
-**1. Verdict** — Dans les clous ou non ? Sois brutal si nécessaire. (2-3 phrases)
-**2. Ajustements programme cette semaine** — 3 actions concrètes et précises.
-**3. Ajustements nutrition** — 2 actions concrètes.
-**4. Signal d'alarme** — Un pattern problématique si tu en vois un, sinon "Rien à signaler."
-
-Zéro encouragement vide. Max 280 mots.`;
-
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] }),
-      });
-      const data = await res.json();
-      setAiText(data.content?.map(b=>b.text||"").join("") || "Erreur.");
-    } catch { setAiText("Erreur réseau."); }
-    setAiLoad(false);
-  };
-
-  const renderAI = (text) => text.split("\n").map((line,i) => {
-    const parts = line.split(/(\*\*[^*]+\*\*)/g);
-    return (
-      <p key={i} style={{margin:"0 0 5px",lineHeight:1.7}}>
-        {parts.map((p,j) => p.startsWith("**")&&p.endsWith("**")
-          ? <strong key={j} style={{color:C.t}}>{p.slice(2,-2)}</strong>
-          : <span key={j}>{p}</span>)}
-      </p>
-    );
+  dates.forEach(date=>{
+    const ds=toYMD(date),isToday=ds===TODAY;
+    const dn=date.toLocaleDateString('fr-FR',{weekday:'short'}),num=date.getDate();
+    const sessions=getSessions4Date(ds);
+    h+=`<div class="day-col${isToday?' is-today':''}"
+      ondragover="onDO(event,'${ds}')" ondragleave="onDL(event)" ondrop="onDrop(event,'${ds}')"
+      data-date="${ds}">
+      <div class="day-hdr">
+        <span class="day-hdr-name">${dn}</span>
+        <span class="day-hdr-num">${num}</span>
+      </div>
+      <div class="day-body">`;
+    sessions.forEach(s=>{
+      const T=TYPES[s.type]||TYPES.muscu,done=!!S.done[s.id];
+      h+=`<div class="sb tp-${s.type}${done?' is-done':''}"
+        draggable="true"
+        ondragstart="onDS(event,'${s.id}')" ondragend="onDE(event)"
+        onclick="openSess('${s.id}')" data-id="${s.id}">
+        <div class="sb-type">${T.icon} ${T.label}</div>
+        <div class="sb-title">${s.title}</div>
+        <div class="sb-dur">${s.dur||'?'} min</div>
+        ${done?'<div class="sb-check">✓</div>':''}
+      </div>`;
+    });
+    h+=`<button class="add-day-btn" onclick="openAdd('${ds}')">+</button></div></div>`;
   });
 
-  const wkData = WEEKS[activeWeek - 1];
-
-  const Btn = ({onClick, children, style={}, disabled=false}) => (
-    <button onClick={onClick} disabled={disabled}
-      style={{fontFamily:font, cursor:disabled?"default":"pointer", border:"none", ...style}}>
-      {children}
-    </button>
-  );
-
-  if (!loaded) return (
-    <div style={{fontFamily:font,background:C.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:C.t3,fontSize:14}}>
-      Chargement…
-    </div>
-  );
-
-  return (
-    <div style={{fontFamily:font, background:C.bg, minHeight:"100vh", color:C.t, maxWidth:640, margin:"0 auto", paddingBottom:80}}>
-
-      {/* HEADER */}
-      <div style={{padding:"28px 24px 20px", borderBottom:`1px solid ${C.brd}`}}>
-        <div style={{fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:C.t3,marginBottom:8}}>Programme personnel — Été 2026</div>
-        <h1 style={{margin:"0 0 3px",fontSize:24,fontWeight:700,letterSpacing:"-0.02em",color:C.t}}>Sèche & Tonus</h1>
-        <p style={{margin:"0 0 16px",fontSize:13,color:C.t2}}>22 ans · 1 m 91 · Départ 80 kg · 26 mai → 14 juillet</p>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{flex:1,height:3,background:C.brdL,borderRadius:2,overflow:"hidden"}}>
-            <div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${C.grn},${C.blu})`,borderRadius:2,transition:"width 0.5s"}}/>
-          </div>
-          <span style={{fontSize:11,color:C.t3,whiteSpace:"nowrap"}}>J.{Math.max(0,todayOff+1)} / {TOTAL_DAYS}</span>
-        </div>
-        <div style={{display:"flex",gap:8,marginTop:14}}>
-          {[
-            {n:totalDn, l:"Faites", c:C.grn},
-            {n:totalPl-totalDn, l:"Restantes", c:C.t2},
-            {n:ecarts.length, l:"Écarts", c:ecarts.length>6?C.red:C.gld},
-            {n:Object.keys(bonus).length, l:"Bonus", c:C.blu},
-          ].map((s,i) => (
-            <div key={i} style={{flex:1,background:C.card,border:`1px solid ${C.brd}`,borderRadius:8,padding:"10px 8px",textAlign:"center",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
-              <div style={{fontSize:22,fontWeight:700,color:s.c,lineHeight:1}}>{s.n}</div>
-              <div style={{fontSize:9,color:C.t3,marginTop:4,textTransform:"uppercase",letterSpacing:"0.07em"}}>{s.l}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* TODAY BANNER */}
-      {todaySess.length > 0 && (
-        <div style={{margin:"16px 24px 0",background:C.grnBg,border:`1px solid ${C.grnBrd}`,borderRadius:10,padding:"12px 16px"}}>
-          <div style={{fontSize:10,color:C.grn,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:5}}>Aujourd'hui</div>
-          {todaySess.map(s => (
-            <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:14,fontWeight:700,color:C.t}}>{s.title}</span>
-              <span style={{fontSize:11,color:C.t2}}>{s.dur} min</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* TABS */}
-      <div style={{display:"flex",padding:"16px 24px 0",gap:2,borderBottom:`1px solid ${C.brd}`}}>
-        {[["programme","Programme"],["nutrition","Nutrition"],["poids","Poids"],["ia","Coach IA"]].map(([id,lbl]) => (
-          <Btn key={id} onClick={()=>setTab(id)} style={{
-            flex:1, padding:"8px 0", background:"none",
-            borderBottom:`2px solid ${tab===id?C.grn:"transparent"}`,
-            color:tab===id?C.grn:C.t3, fontSize:12, fontWeight:tab===id?700:400, letterSpacing:"0.03em",
-            transition:"all 0.15s",
-          }}>{lbl}</Btn>
-        ))}
-      </div>
-
-      <div style={{padding:"20px 24px"}}>
-
-        {/* ═══ PROGRAMME ═══ */}
-        {tab==="programme" && (<>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-            <Btn onClick={()=>setActiveWeek(w=>Math.max(1,w-1))} disabled={activeWeek<=1}
-              style={{background:"none",border:`1px solid ${C.brd}`,borderRadius:6,width:36,height:36,color:activeWeek<=1?C.brdL:C.t2,fontSize:18}}>‹</Btn>
-            <div style={{textAlign:"center"}}>
-              <div style={{fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                Semaine {activeWeek} / 7
-                {activeWeek===curWeek && <span style={{background:C.grn,color:"white",padding:"1px 7px",borderRadius:10,fontSize:9,fontWeight:700}}>EN COURS</span>}
-                {activeWeek<curWeek && <span style={{background:C.brdL,color:C.t3,padding:"1px 7px",borderRadius:10,fontSize:9}}>PASSÉE</span>}
-              </div>
-              <div style={{fontSize:17,fontWeight:700,margin:"4px 0 2px",letterSpacing:"-0.01em"}}>{wkData.theme}</div>
-              <div style={{fontSize:11,color:C.t3}}>{wkData.dates}</div>
-            </div>
-            <Btn onClick={()=>setActiveWeek(w=>Math.min(7,w+1))} disabled={activeWeek>=7}
-              style={{background:"none",border:`1px solid ${C.brd}`,borderRadius:6,width:36,height:36,color:activeWeek>=7?C.brdL:C.t2,fontSize:18}}>›</Btn>
-          </div>
-
-          {wkData.alert && (
-            <div style={{background:C.redBg,border:`1px solid ${C.redBrd}`,borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:12,color:C.red}}>
-              ⚠ {wkData.alert}
-            </div>
-          )}
-
-          {wkData.sessions.map(sess => {
-            const isDone = !!done[sess.id];
-            const isBns  = !!bonus[sess.id];
-            const isExp  = expanded === sess.id;
-            const sDate  = getDate(sess.id);
-            const isToday = sDate === TODAY;
-            const T = TTYPES[sess.type];
-
-            return (
-              <div key={sess.id} style={{
-                background: isDone ? C.grnBg : C.card,
-                border:`1px solid ${isDone?C.grnBrd:isToday?"#2E7D5A":T.brd}`,
-                borderRadius:10, marginBottom:10, overflow:"hidden",
-                boxShadow: isToday?`0 0 0 2px ${C.grn}25`:"0 1px 4px rgba(0,0,0,0.06)",
-              }}>
-                <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",cursor:"pointer"}} onClick={()=>setExpanded(isExp?null:sess.id)}>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:5,flexWrap:"wrap"}}>
-                      <span style={{fontSize:9,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:T.col}}>{T.tag}</span>
-                      {isToday && <span style={{fontSize:9,background:C.grn,color:"white",padding:"1px 6px",borderRadius:8,fontWeight:700}}>AUJOURD'HUI</span>}
-                      {isDone && <span style={{fontSize:9,background:C.grn,color:"white",padding:"1px 6px",borderRadius:8}}>✓ FAIT</span>}
-                    </div>
-                    <div style={{fontSize:15,fontWeight:700,color:C.t,marginBottom:4,letterSpacing:"-0.01em"}}>{sess.title}</div>
-                    <div style={{fontSize:11,color:C.t3,display:"flex",gap:12}}>
-                      <span
-                        onClick={e=>{e.stopPropagation();setDateModal(sess.id);setDateVal(sDate);}}
-                        style={{color:C.blu,textDecoration:"underline",textDecorationStyle:"dotted",cursor:"pointer"}}
-                      >{fmtDate(sDate)}</span>
-                      <span>{sess.dur} min</span>
-                    </div>
-                  </div>
-                  <span style={{fontSize:12,color:C.t3,marginRight:4}}>{isExp?"▲":"▼"}</span>
-                  <Btn onClick={e=>{e.stopPropagation();toggleDone(sess.id);}}
-                    style={{width:30,height:30,borderRadius:6,border:`1.5px solid ${isDone?C.grn:C.brd}`,background:isDone?C.grn:"white",color:"white",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    {isDone?"✓":""}
-                  </Btn>
-                </div>
-
-                {isExp && (
-                  <div style={{padding:"0 16px 14px",borderTop:`1px solid ${C.brdL}`}}>
-                    {sess.velo && (
-                      <div style={{background:C.bluBg,border:`1px solid ${C.bluBrd}`,borderRadius:7,padding:"9px 12px",margin:"10px 0",fontSize:12,color:C.blu,fontStyle:"italic"}}>
-                        🚴 {sess.velo}
-                      </div>
-                    )}
-                    {sess.exercises?.map((ex,i) => (
-                      <div key={i} style={{padding:"8px 0",borderBottom:`1px solid ${C.brdL}`}}>
-                        <div style={{fontSize:13,fontWeight:700,color:C.t,marginBottom:2}}>{ex.n}</div>
-                        <div style={{fontSize:11,color:C.t2,fontStyle:"italic",lineHeight:1.5}}>{ex.d}</div>
-                      </div>
-                    ))}
-                    <div style={{marginTop:10}}>
-                      {!isBns
-                        ? <Btn onClick={()=>{setBonusModal(sess.id);setBonusNote("");}} style={{fontSize:11,padding:"5px 12px",borderRadius:6,border:`1px solid ${C.brd}`,background:"white",color:C.t2}}>
-                            + Session bonus ici
-                          </Btn>
-                        : <span style={{fontSize:11,color:C.grn,fontStyle:"italic"}}>Bonus enregistré ✓{bonus[sess.id]?.note?` — ${bonus[sess.id].note}`:""}</span>
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          <Btn onClick={()=>setEcartModal(true)} style={{width:"100%",marginTop:6,padding:"11px",background:C.redBg,border:`1px solid ${C.redBrd}`,borderRadius:8,color:C.red,fontSize:11,letterSpacing:"0.07em",textTransform:"uppercase",fontWeight:700}}>
-            ⚠ Signaler un écart alimentaire
-          </Btn>
-        </>)}
-
-        {/* ═══ NUTRITION ═══ */}
-        {tab==="nutrition" && (<>
-          <div style={{background:C.grnBg,border:`1px solid ${C.grnBrd}`,borderRadius:10,padding:"14px 16px",marginBottom:20}}>
-            <div style={{fontSize:10,color:C.grn,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:8}}>Logique de la sèche</div>
-            <p style={{margin:0,fontSize:13,color:C.t2,lineHeight:1.75}}>
-              Pas de petit-déjeuner = fenêtre de jeûne naturelle ~16 h. La nuit et le matin, ton corps puise dans les graisses. Ne brise pas ça. L'objectif n'est pas la privation — c'est d'<strong style={{color:C.t}}>éliminer les calories vides</strong> et de <strong style={{color:C.t}}>contrôler les portions</strong>. Un déficit de 300–400 kcal/jour avec le sport suffit.
-            </p>
-          </div>
-
-          <div style={{fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10}}>À supprimer</div>
-          {NUTRITION.stop.map((r,i) => (
-            <div key={i} style={{background:C.redBg,border:`1px solid ${C.redBrd}`,borderRadius:9,padding:"12px 14px",marginBottom:8}}>
-              <div style={{fontSize:13,fontWeight:700,color:C.red,marginBottom:4}}>{r.item}</div>
-              <div style={{fontSize:12,color:C.t2,marginBottom:4}}>→ {r.rep}</div>
-              <div style={{fontSize:10,color:C.t3}}>Économie : {r.kcal}</div>
-            </div>
-          ))}
-
-          <div style={{fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10,marginTop:20}}>À réduire</div>
-          {NUTRITION.reduce.map((r,i) => (
-            <div key={i} style={{background:C.gldBg,border:`1px solid ${C.gldBrd}`,borderRadius:9,padding:"11px 14px",marginBottom:7,fontSize:13,color:C.t2,lineHeight:1.6}}>{r}</div>
-          ))}
-
-          <div style={{fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10,marginTop:20}}>À conserver</div>
-          {NUTRITION.keep.map((r,i) => (
-            <div key={i} style={{background:C.grnBg,border:`1px solid ${C.grnBrd}`,borderRadius:9,padding:"11px 14px",marginBottom:7,fontSize:13,color:C.t2,lineHeight:1.6}}>{r}</div>
-          ))}
-
-          <div style={{background:C.gldBg,border:`1px solid ${C.gldBrd}`,borderRadius:9,padding:"14px 16px",marginTop:20}}>
-            <div style={{fontSize:10,color:C.gld,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:8}}>Alcool le weekend</div>
-            <p style={{margin:0,fontSize:13,color:C.t2,lineHeight:1.75}}>Intouchable — c'est noté. Règle unique : le lundi suivant, repas ultra-propre (légumes + protéines, aucun féculent). Pas de dessert le soir où tu bois.</p>
-          </div>
-
-          <Btn onClick={()=>setEcartModal(true)} style={{width:"100%",marginTop:16,padding:"11px",background:C.redBg,border:`1px solid ${C.redBrd}`,borderRadius:8,color:C.red,fontSize:11,letterSpacing:"0.07em",textTransform:"uppercase",fontWeight:700}}>
-            ⚠ Signaler un écart alimentaire
-          </Btn>
-        </>)}
-
-        {/* ═══ POIDS ═══ */}
-        {tab==="poids" && (<>
-          <p style={{margin:"0 0 6px",fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase"}}>Pesée hebdomadaire</p>
-          <p style={{margin:"0 0 18px",fontSize:12,color:C.t2,fontStyle:"italic",lineHeight:1.6}}>Pèse-toi le lundi matin à jeun, toujours dans les mêmes conditions. Saisis le chiffre ici.</p>
-
-          {WEEKS.map(w => {
-            const isPast = w.n < curWeek;
-            const isCur  = w.n === curWeek;
-            const rec    = weights[w.n];
-            return (
-              <div key={w.n} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:`1px solid ${C.brdL}`}}>
-                <div style={{width:64,flexShrink:0}}>
-                  <div style={{fontSize:12,fontWeight:700,color:isCur?C.grn:isPast?C.t:C.t3}}>Sem. {w.n}</div>
-                  <div style={{fontSize:10,color:C.t3}}>{w.dates.split("–")[0].trim()}</div>
-                </div>
-                <input
-                  type="number" step="0.1" min="50" max="150"
-                  placeholder="— kg"
-                  value={wtInput[w.n]||""}
-                  onChange={e=>setWtInput(p=>({...p,[w.n]:e.target.value}))}
-                  onBlur={()=>saveWeight(w.n)}
-                  style={{width:80,padding:"7px 10px",border:`1px solid ${isCur?C.grnBrd:C.brd}`,borderRadius:6,fontSize:13,fontFamily:font,color:C.t,background:isCur?C.grnBg:"white",outline:"none"}}
-                />
-                {rec && (
-                  <span style={{fontSize:12,color:rec<=TARGET_KG?C.grn:rec<79?C.gld:C.t2}}>
-                    {rec} kg{rec<=TARGET_KG?" ✓":` (obj. ${TARGET_KG} kg)`}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-
-          {Object.keys(weights).length >= 1 && (
-            <div style={{marginTop:24}}>
-              <div style={{fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:12}}>Courbe de poids</div>
-              <div style={{background:C.card,border:`1px solid ${C.brd}`,borderRadius:10,padding:"16px 8px 8px",boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
-                <ResponsiveContainer width="100%" height={160}>
-                  <LineChart data={chartData} margin={{top:5,right:24,bottom:5,left:0}}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={C.brdL}/>
-                    <XAxis dataKey="name" tick={{fill:C.t3,fontSize:10,fontFamily:font}}/>
-                    <YAxis domain={["auto","auto"]} tick={{fill:C.t3,fontSize:10}} width={36} unit="kg"/>
-                    <Tooltip contentStyle={{fontFamily:font,fontSize:12,border:`1px solid ${C.brd}`,borderRadius:6,background:"white"}}
-                      formatter={(v,n)=>[v?`${v} kg`:"–",n==="poids"?"Poids":"Objectif"]}/>
-                    <ReferenceLine y={TARGET_KG} stroke={C.grn} strokeDasharray="4 4"
-                      label={{value:`Obj. ${TARGET_KG} kg`,fill:C.grn,fontSize:10,fontFamily:font,position:"insideTopRight"}}/>
-                    <Line type="monotone" dataKey="poids" stroke={C.t} strokeWidth={2}
-                      dot={{r:4,fill:C.t,stroke:"white",strokeWidth:2}} connectNulls={false}/>
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          )}
-
-          {ecarts.length > 0 && (<>
-            <div style={{fontSize:10,color:C.t3,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:24,marginBottom:10}}>Historique des écarts</div>
-            {ecarts.slice().reverse().map((e,i) => (
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${C.brdL}`,fontSize:12}}>
-                <span style={{color:C.red}}>{e.type}{e.note?` — ${e.note}`:""}</span>
-                <span style={{color:C.t3,fontSize:11}}>{e.date}</span>
-              </div>
-            ))}
-          </>)}
-
-          <Btn onClick={()=>setEcartModal(true)} style={{width:"100%",marginTop:16,padding:"11px",background:C.redBg,border:`1px solid ${C.redBrd}`,borderRadius:8,color:C.red,fontSize:11,letterSpacing:"0.07em",textTransform:"uppercase",fontWeight:700}}>
-            ⚠ Signaler un écart alimentaire
-          </Btn>
-        </>)}
-
-        {/* ═══ COACH IA ═══ */}
-        {tab==="ia" && (<>
-          <p style={{margin:"0 0 16px",fontSize:13,color:C.t2,lineHeight:1.75}}>
-            Le Coach analyse tes séances cochées, tes pesées et tes écarts logués, puis recalibre ton programme. Plus tu loggues fidèlement, plus l'analyse est précise.
-          </p>
-          <div style={{background:C.card,border:`1px solid ${C.brd}`,borderRadius:10,padding:"14px 16px",marginBottom:14,boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
-            <div style={{fontSize:10,color:C.t3,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Bilan actuel</div>
-            {[
-              ["Séances complétées", `${totalDn} / ${totalPl}`],
-              ["Semaine en cours", `Semaine ${curWeek} / 7`],
-              ["Écarts logués", ecarts.length],
-              ["Dernier poids", lastWeightEntry ? `${lastWeightEntry} kg` : "Non renseigné"],
-            ].map(([k,v],i) => (
-              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<3?`1px solid ${C.brdL}`:"none",fontSize:13}}>
-                <span style={{color:C.t2}}>{k}</span>
-                <span style={{fontWeight:700,color:C.t}}>{v}</span>
-              </div>
-            ))}
-          </div>
-          <Btn onClick={recalibrate} disabled={aiLoad} style={{
-            width:"100%",padding:"13px",background:aiLoad?C.grnBg:C.grn,border:`1px solid ${aiLoad?C.grnBrd:C.grn}`,
-            borderRadius:9,color:aiLoad?C.grn:"white",fontSize:13,fontWeight:700,letterSpacing:"0.04em",transition:"all 0.2s",
-          }}>
-            {aiLoad?"Analyse en cours…":"Recalibrer mon programme"}
-          </Btn>
-
-          {aiText && !aiLoad && (
-            <div style={{background:C.card,border:`1px solid ${C.brd}`,borderRadius:10,padding:"18px",marginTop:14,fontSize:13,color:C.t2,lineHeight:1.75,boxShadow:"0 1px 4px rgba(0,0,0,0.05)"}}>
-              {renderAI(aiText)}
-            </div>
-          )}
-          {!aiText && !aiLoad && (
-            <div style={{background:C.card,border:`1px dashed ${C.brd}`,borderRadius:10,padding:"32px 20px",marginTop:14,textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.03)"}}>
-              <div style={{fontSize:13,color:C.t3,fontStyle:"italic"}}>Lance l'analyse pour obtenir un bilan personnalisé.</div>
-            </div>
-          )}
-        </>)}
-      </div>
-
-      {/* ─── MODAL ÉCART ─── */}
-      {ecartModal && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:100,padding:"0 0 16px"}}>
-          <div style={{background:"white",borderRadius:"14px 14px 10px 10px",padding:"22px",width:"92%",maxWidth:480,border:`1px solid ${C.brd}`}}>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:14,color:C.t,fontFamily:font}}>Signaler un écart</div>
-            <div style={{fontSize:10,color:C.t3,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.08em",fontFamily:font}}>Type :</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-              {ECART_OPTS.map(opt => (
-                <Btn key={opt} onClick={()=>setEcartType(opt)} style={{
-                  padding:"6px 12px",borderRadius:20,border:`1px solid ${ecartType===opt?C.red:C.brd}`,
-                  background:ecartType===opt?C.redBg:"white",color:ecartType===opt?C.red:C.t2,fontSize:12,
-                }}>{opt}</Btn>
-              ))}
-            </div>
-            <input value={ecartNote} onChange={e=>setEcartNote(e.target.value)}
-              placeholder="Note — contexte, raison… (optionnel)"
-              style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.brd}`,borderRadius:7,fontSize:13,fontFamily:font,color:C.t,boxSizing:"border-box",outline:"none"}}/>
-            <Btn onClick={submitEcart} style={{marginTop:12,width:"100%",padding:"12px",background:C.red,borderRadius:7,color:"white",fontSize:13,fontWeight:700}}>
-              Enregistrer
-            </Btn>
-            <Btn onClick={()=>setEcartModal(false)} style={{marginTop:6,width:"100%",padding:"8px",background:"none",color:C.t3,fontSize:12}}>
-              Annuler
-            </Btn>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL DATE ─── */}
-      {dateModal && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:"0 20px"}}>
-          <div style={{background:"white",borderRadius:12,padding:"22px",width:"100%",maxWidth:360,border:`1px solid ${C.brd}`}}>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:6,color:C.t,fontFamily:font}}>Choisir un autre jour</div>
-            <p style={{margin:"0 0 14px",fontSize:12,color:C.t2,fontStyle:"italic",fontFamily:font}}>Déplace cette séance à la date qui t'arrange.</p>
-            <input type="date" value={dateVal} onChange={e=>setDateVal(e.target.value)}
-              min="2026-05-26" max="2026-07-14"
-              style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.brd}`,borderRadius:7,fontSize:14,fontFamily:font,color:C.t,boxSizing:"border-box",outline:"none"}}/>
-            <Btn onClick={submitDate} style={{marginTop:12,width:"100%",padding:"12px",background:C.grn,borderRadius:7,color:"white",fontSize:13,fontWeight:700}}>
-              Confirmer
-            </Btn>
-            <Btn onClick={()=>setDateModal(null)} style={{marginTop:6,width:"100%",padding:"8px",background:"none",color:C.t3,fontSize:12}}>
-              Annuler
-            </Btn>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL BONUS ─── */}
-      {bonusModal && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:100,padding:"0 20px"}}>
-          <div style={{background:"white",borderRadius:12,padding:"22px",width:"100%",maxWidth:360,border:`1px solid ${C.brd}`}}>
-            <div style={{fontSize:16,fontWeight:700,marginBottom:6,color:C.t,fontFamily:font}}>Session bonus</div>
-            <input value={bonusNote} onChange={e=>setBonusNote(e.target.value)}
-              placeholder="Ex : 20 min vélo supplémentaire, circuit abdos…"
-              style={{width:"100%",padding:"9px 12px",border:`1px solid ${C.brd}`,borderRadius:7,fontSize:13,fontFamily:font,color:C.t,boxSizing:"border-box",outline:"none"}}/>
-            <Btn onClick={submitBonus} style={{marginTop:12,width:"100%",padding:"12px",background:C.grn,borderRadius:7,color:"white",fontSize:13,fontWeight:700}}>
-              Enregistrer
-            </Btn>
-            <Btn onClick={()=>setBonusModal(null)} style={{marginTop:6,width:"100%",padding:"8px",background:"none",color:C.t3,fontSize:12}}>
-              Annuler
-            </Btn>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  h+=`</div></div><button class="ecart-btn" onclick="openEcart()">⚠ Signaler un écart alimentaire</button>`;
+  document.getElementById('tab-plan').innerHTML=h;
 }
+
+/* ══ SESSION MODAL ══ */
+function openSess(id){
+  const s=findSess(id);if(!s)return;
+  const T=TYPES[s.type]||TYPES.muscu,done=!!S.done[id],isCust=String(id).startsWith('c_'),sd=getSD(id);
+  let exoH='';
+  if(s.exercises&&s.exercises.length){
+    exoH=`<div class="exo-lbl">Exercices</div><div class="exo-list">`;
+    s.exercises.forEach((ex,i)=>{
+      const key=`${id}_${i}`,dis=!!S.disabledExos[key];
+      exoH+=`<div class="exo-row${dis?' dis':''}" id="exo_${key}">
+        <div class="exo-txt"><div class="exo-n">${ex.n}</div><div class="exo-d">${ex.d}</div></div>
+        <button class="exo-tog${dis?' on':''}" onclick="togExo('${key}')" title="${dis?'Réactiver':'Désactiver'}">${dis?'↺':'✕'}</button>
+      </div>`;
+    });
+    exoH+=`</div>`;
+  }
+  showM(`
+    <button class="m-close" onclick="closeModal()">×</button>
+    <div class="m-tag" style="background:${T.bg};color:${T.col};border:1px solid ${T.brd}">${T.icon} ${T.label}</div>
+    <div class="m-sess-title">${s.title}</div>
+    <div class="m-date-row">
+      <span class="m-date-link" onclick="openDP('${id}')">${fmtDate(sd)}</span>
+      <span>${s.dur||'?'} min</span>
+    </div>
+    ${s.velo?`<div class="velo-blk">🚴 ${s.velo}</div>`:''}
+    ${exoH}
+    <div class="m-actions">
+      <button class="${done?'btn-p btn-done-s':'btn-p'}" onclick="togDone('${id}')">${done?'✓ Fait — annuler':'Marquer fait'}</button>
+      <button class="btn-s" onclick="openMove('${id}')">↔ Déplacer</button>
+      ${isCust?`<button class="btn-d" onclick="delCust('${id}')">🗑</button>`:''}
+    </div>`);
+}
+
+function togDone(id){
+  S.done[id]=!S.done[id];saveS();renderHdr();closeModal();
+  if(!document.getElementById('tab-plan').hidden)renderCal();
+}
+
+function togExo(key){
+  S.disabledExos[key]=!S.disabledExos[key];saveS();
+  const row=document.getElementById(`exo_${key}`);
+  if(row){
+    row.classList.toggle('dis',!!S.disabledExos[key]);
+    const b=row.querySelector('.exo-tog');
+    if(b){b.classList.toggle('on',!!S.disabledExos[key]);b.textContent=S.disabledExos[key]?'↺':'✕';}
+  }
+}
+
+/* ══ DATE PICKER ══ */
+function openDP(id){
+  showM(`
+    <button class="m-close" onclick="closeModal()">×</button>
+    <div class="m-title">Choisir un autre jour</div>
+    <p style="font-size:12px;color:var(--t2);font-style:italic;margin-bottom:12px">Déplace cette séance à la date qui t'arrange.</p>
+    <input type="date" id="dp" class="minp" value="${getSD(id)}" min="2026-05-26" max="2026-07-14">
+    <div class="m-actions" style="margin-top:12px">
+      <button class="btn-p" onclick="confirmDP('${id}')">Confirmer</button>
+      <button class="btn-s" onclick="closeModal()">Annuler</button>
+    </div>`);
+}
+function confirmDP(id){const v=document.getElementById('dp').value;if(v)moveTo(id,v);closeModal();}
+
+/* ══ MOVE PICKER ══ */
+function openMove(id){
+  const dates=getWeekDates(S.currentWeek),cur=getSD(id);
+  const btns=dates.map(d=>{const ds=toYMD(d),lbl=d.toLocaleDateString('fr-FR',{weekday:'short',day:'numeric'}),sel=ds===cur;
+    return `<button class="dpk${sel?' sel':''}" onclick="pickDay('${id}','${ds}')">${lbl}</button>`;
+  }).join('');
+  showM(`
+    <button class="m-close" onclick="closeModal()">×</button>
+    <div class="m-title">Déplacer la séance</div>
+    <p style="font-size:12px;color:var(--t2);font-style:italic;margin-bottom:8px">Jour de la semaine :</p>
+    <div class="days-grid">${btns}</div>
+    <p style="font-size:11px;color:var(--t3);margin-top:10px;margin-bottom:4px">Ou autre date :</p>
+    <input type="date" id="mp" class="minp" value="${cur}" min="2026-05-26" max="2026-07-14">
+    <div class="m-actions" style="margin-top:12px">
+      <button class="btn-p" onclick="pickDay('${id}',document.getElementById('mp').value)">Confirmer</button>
+      <button class="btn-s" onclick="closeModal()">Annuler</button>
+    </div>`);
+}
+function pickDay(id,nd){if(nd){moveTo(id,nd);}closeModal();}
+
+/* ══ DELETE CUSTOM ══ */
+function delCust(id){
+  if(!confirm('Supprimer cette séance ?'))return;
+  S.customSessions=S.customSessions.filter(s=>s.id!==id);
+  delete S.done[id];saveS();renderCal();closeModal();
+}
+
+/* ══ ADD SESSION MODAL ══ */
+let addDate='',addType='muscu';
+
+function openAdd(ds){addDate=ds;addType='muscu';renderAddM();}
+
+function renderAddM(){
+  const typeKeys=['muscu','velo','combo','foot','run','tennis','optional'];
+  const tBtns=typeKeys.map(k=>{const T=TYPES[k],sel=k===addType;
+    return `<button class="type-btn" style="${sel?`border-color:${T.col};background:${T.bg};color:${T.col};border-width:2px`:''}"
+      onclick="selAddType('${k}')"><span class="ti">${T.icon}</span>${T.label}</button>`;
+  }).join('');
+  showM(`
+    <button class="m-close" onclick="closeModal()">×</button>
+    <div class="m-title">Ajouter une séance</div>
+    <span class="lbl">Type d'activité</span>
+    <div class="type-grid">${tBtns}</div>
+    <span class="lbl" style="margin-top:10px">Titre</span>
+    <input id="at" class="minp" placeholder="${TYPES[addType].label}">
+    <span class="lbl" style="margin-top:10px">Date</span>
+    <input id="ad" type="date" class="minp" value="${addDate}" min="2026-05-26" max="2026-07-14">
+    <span class="lbl" style="margin-top:10px">Durée (min, optionnel)</span>
+    <input id="adur" type="number" class="minp" placeholder="60" min="5" max="300">
+    <div class="m-actions" style="margin-top:16px">
+      <button class="btn-p" onclick="submitAdd()">Ajouter</button>
+      <button class="btn-s" onclick="closeModal()">Annuler</button>
+    </div>`);
+}
+
+function selAddType(t){
+  addType=t;
+  const prevT=document.getElementById('at')?.value||'';
+  const prevDur=document.getElementById('adur')?.value||'';
+  const prevD=document.getElementById('ad')?.value||addDate;
+  renderAddM();
+  const tel=document.getElementById('at');if(tel)tel.value=prevT;
+  const del=document.getElementById('adur');if(del)del.value=prevDur;
+  const ddel=document.getElementById('ad');if(ddel)ddel.value=prevD;
+}
+
+function submitAdd(){
+  const title=(document.getElementById('at').value.trim())||TYPES[addType].label;
+  const date=document.getElementById('ad').value||addDate;
+  const dur=parseInt(document.getElementById('adur').value)||undefined;
+  S.customSessions.push({id:'c_'+Date.now(),type:addType,title,date,dur,done:false});
+  saveS();renderCal();closeModal();
+}
+
+/* ══ ÉCART MODAL ══ */
+let selET=ECART_OPTS[0];
+
+function openEcart(){selET=ECART_OPTS[0];renderEcartM();}
+
+function renderEcartM(){
+  const chips=ECART_OPTS.map(o=>`<div class="chip${o===selET?' sel':''}" onclick="selEcartT('${o}')">${o}</div>`).join('');
+  showM(`
+    <button class="m-close" onclick="closeModal()">×</button>
+    <div class="m-title">Signaler un écart</div>
+    <span class="lbl">Type</span>
+    <div class="chips">${chips}</div>
+    <span class="lbl">Note (optionnel)</span>
+    <input id="en" class="minp" placeholder="Contexte, raison…">
+    <div class="m-actions" style="margin-top:14px">
+      <button class="btn-p" style="background:#B83A2A" onclick="submitEcart()">Enregistrer</button>
+      <button class="btn-s" onclick="closeModal()">Annuler</button>
+    </div>`);
+}
+
+function selEcartT(t){selET=t;renderEcartM();}
+function submitEcart(){
+  const n=document.getElementById('en').value.trim();
+  S.ecarts.push({type:selET,note:n,date:TODAY});
+  saveS();renderHdr();closeModal();
+}
+
+/* ══ MODAL SYSTEM ══ */
+function showM(h){document.getElementById('mbox').innerHTML=h;document.getElementById('modal').removeAttribute('hidden');}
+function closeModal(){document.getElementById('modal').setAttribute('hidden','');}
+
+/* ══ WEEK NAV ══ */
+function chWk(d){S.currentWeek=Math.max(1,Math.min(7,S.currentWeek+d));saveS();renderCal();}
+
+/* ══ TAB SWITCH ══ */
+function switchTab(id){
+  ['plan','nutri','poids'].forEach(t=>{
+    document.getElementById(`tab-${t}`).hidden=t!==id;
+    const b=document.getElementById(`tbtn-${t}`);
+    if(b)b.classList.toggle('active',t===id);
+  });
+  if(id==='nutri')renderNutri();
+  if(id==='poids')renderPoids();
+}
+
+/* ══ NUTRITION ══ */
+function renderNutri(){
+  let h=`<div style="background:var(--grnBg);border:1px solid var(--grnBrd);border-radius:10px;padding:14px 16px;margin-bottom:4px">
+    <div style="font-size:10px;color:var(--grn);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Logique de la sèche</div>
+    <p style="font-size:13px;color:var(--t2);line-height:1.7">Pas de petit-déjeuner = fenêtre de jeûne naturelle ~16 h. La nuit et le matin, ton corps puise dans les graisses. L'objectif : <strong>éliminer les calories vides</strong> et <strong>contrôler les portions</strong>. Un déficit de 300–400 kcal/jour avec le sport suffit.</p>
+  </div>
+  <div class="sec-title">À supprimer</div>`;
+  NUTRITION.stop.forEach(r=>{
+    h+=`<div class="n-card" style="background:var(--redBg);border:1px solid var(--redBrd)">
+      <div style="font-weight:700;color:var(--red);margin-bottom:4px">${r.item}</div>
+      <div style="color:var(--t2);margin-bottom:3px">→ ${r.rep}</div>
+      <div style="font-size:10px;color:var(--t3)">Économie : ${r.kcal}</div>
+    </div>`;
+  });
+  h+=`<div class="sec-title">À réduire</div>`;
+  NUTRITION.reduce.forEach(r=>{h+=`<div class="n-card" style="background:var(--gldBg);border:1px solid var(--gldBrd);color:var(--t2)">${r}</div>`;});
+  h+=`<div class="sec-title">À conserver</div>`;
+  NUTRITION.keep.forEach(r=>{h+=`<div class="n-card" style="background:var(--grnBg);border:1px solid var(--grnBrd);color:var(--t2)">${r}</div>`;});
+  h+=`<div class="n-card" style="background:var(--gldBg);border:1px solid var(--gldBrd);margin-top:16px">
+    <div style="font-weight:700;color:var(--gld);margin-bottom:6px">Alcool le weekend</div>
+    <p style="font-size:13px;color:var(--t2);line-height:1.7">Intouchable. Règle unique : le lundi suivant, repas ultra-propre (légumes + protéines, aucun féculent). Pas de dessert le soir où tu bois.</p>
+  </div>
+  <button class="ecart-btn" onclick="openEcart()">⚠ Signaler un écart alimentaire</button>`;
+  document.getElementById('tab-nutri').innerHTML=h;
+}
+
+/* ══ POIDS ══ */
+let wtChart=null;
+
+function renderPoids(){
+  const cw=getCurrentWeek();
+  let rows=WEEKS.map(w=>{
+    const isCur=w.n===cw,isPast=w.n<cw,rec=S.weights[w.n];
+    return `<div class="wt-row">
+      <div class="wt-wk">
+        <div class="wt-wk-n" style="color:${isCur?'var(--grn)':isPast?'var(--t)':'var(--t3)'}">${isCur?'● ':''}S.${w.n}</div>
+        <div class="wt-wk-d">${w.dates.split('–')[0].trim()}</div>
+      </div>
+      <input type="number" step="0.1" min="50" max="150"
+        class="wt-inp${isCur?' cur':''}" placeholder="— kg" value="${rec||''}"
+        onchange="saveWt(${w.n},this.value)">
+      ${rec?`<div style="font-size:12px;color:${rec<=TARGET_KG?'var(--grn)':rec<79?'var(--gld)':'var(--t2)'}">${rec} kg${rec<=TARGET_KG?' ✓':''}</div>`:''}
+    </div>`;
+  }).join('');
+
+  let h=`
+    <p style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Pesée hebdomadaire</p>
+    <p style="font-size:12px;color:var(--t2);font-style:italic;line-height:1.6;margin-bottom:16px">Pèse-toi le lundi matin à jeun, toujours dans les mêmes conditions.</p>
+    ${rows}
+    <div class="chart-wrap">
+      <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Courbe de poids</div>
+      <canvas id="wc" height="160"></canvas>
+    </div>`;
+
+  if(S.ecarts.length>0){
+    h+=`<div class="sec-title" style="margin-top:20px">Historique des écarts</div>`;
+    S.ecarts.slice().reverse().forEach(e=>{
+      h+=`<div class="ecart-row"><span style="color:var(--red)">${e.type}${e.note?` — ${e.note}`:''}</span><span style="font-size:11px;color:var(--t3)">${e.date}</span></div>`;
+    });
+  }
+  h+=`<button class="ecart-btn" onclick="openEcart()">⚠ Signaler un écart alimentaire</button>`;
+  document.getElementById('tab-poids').innerHTML=h;
+  renderWtChart();
+}
+
+function saveWt(wk,val){
+  const v=parseFloat(val);
+  if(!isNaN(v)&&v>40&&v<200){S.weights[wk]=v;saveS();renderHdr();renderWtChart();}
+}
+
+function renderWtChart(){
+  const canvas=document.getElementById('wc');if(!canvas)return;
+  if(wtChart){wtChart.destroy();wtChart=null;}
+  const data=WEEKS.map(w=>S.weights[w.n]||null);
+  wtChart=new Chart(canvas.getContext('2d'),{
+    type:'line',
+    data:{
+      labels:WEEKS.map(w=>`S${w.n}`),
+      datasets:[
+        {label:'Poids',data,borderColor:'#1A1A1A',borderWidth:2,pointBackgroundColor:'#1A1A1A',pointBorderColor:'#fff',pointBorderWidth:2,pointRadius:5,tension:.3,spanGaps:false},
+        {label:`Objectif ${TARGET_KG} kg`,data:Array(7).fill(TARGET_KG),borderColor:'#2E7D5A',borderWidth:1,borderDash:[4,4],pointRadius:0},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.parsed.y??'—'} kg`}}},
+      scales:{y:{ticks:{callback:v=>`${v}kg`}}}
+    }
+  });
+}
+
+/* ══ INIT ══ */
+window.addEventListener('DOMContentLoaded',()=>{
+  loadS();
+  if(!S.currentWeek||S.currentWeek<1)S.currentWeek=getCurrentWeek();
+  renderHdr();
+  switchTab('plan');
+});
+</script>
+</body>
+</html>
