@@ -693,6 +693,7 @@ function switchTab(id){
     const b=document.getElementById(`tbtn-${t}`);
     if(b)b.classList.toggle('active',t===id);
   });
+  if(id==='plan')renderCal();
   if(id==='nutri')renderNutri();
   if(id==='poids')renderPoids();
 }
