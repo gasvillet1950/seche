@@ -161,7 +161,7 @@ button{font-family:var(--f);cursor:pointer;border:none;}
 </div>
 <script>
 /* ══ CONSTANTS ══ */
-const PROG_START=new Date('2026-05-26');
+const PROG_START=new Date(2026,4,26);
 const PROG_END=new Date('2026-07-14');
 const TOTAL_DAYS=Math.round((PROG_END-PROG_START)/86400000);
 const TARGET_KG=75;
@@ -177,192 +177,15 @@ const TYPES={
   tennis: {icon:'🎾',label:'Tennis',     col:'#5A2E7D',bg:'#F4F0F8',brd:'#C8B0E0'},
 };
 
-const DEFAULT_DATES={
-  w1s1:'2026-05-26',w1s2:'2026-05-29',
-  w2s1:'2026-06-02',w2s2:'2026-06-04',w2s3:'2026-06-06',w2s4:'2026-06-07',
-  w3s1:'2026-06-09',w3s2:'2026-06-11',w3s3:'2026-06-13',w3s4:'2026-06-14',
-  w4s1:'2026-06-16',w4s2:'2026-06-18',w4s3:'2026-06-20',w4s4:'2026-06-21',
-  w5s1:'2026-06-23',w5s2:'2026-06-25',w5s3:'2026-06-27',w5s4:'2026-06-28',
-  w6s1:'2026-06-30',w6s2:'2026-07-02',w6s3:'2026-07-04',w6s4:'2026-07-05',
-  w7s1:'2026-07-07',w7s2:'2026-07-09',w7s3:'2026-07-11',
-};
 
 const WEEKS=[
-  {n:1,dates:'26 mai – 1er juin',theme:'Démarrage doux',
-   alert:'Cheville en récupération — vélo & gainage supprimés.',
-   sessions:[
-    {id:'w1s1',type:'muscu',title:'Upper Body A',dur:35,exercises:[
-      {n:'Développé haltères (sol)',d:'3×10 — Pectoraux. Coudes à 45°, pause en bas.'},
-      {n:'Écarté haltères (sol)',d:'3×12 — Pectoraux. Mouvement lent, étirement complet.'},
-      {n:'Rowing haltère 1 bras',d:'3×10/côté — Dos. Appui genou sur chaise.'},
-      {n:'Curl biceps haltères',d:'3×12 — Sans élan. Contraction au sommet.'},
-      {n:'Élévations latérales',d:'3×15 léger — Épaules. Coudes légèrement fléchis.'},
-    ]},
-    {id:'w1s2',type:'muscu',title:'Upper Body B + Abdos',dur:40,exercises:[
-      {n:'Développé haltères (sol)',d:'3×10'},
-      {n:'Extension triceps haltère',d:'3×12 — Derrière la tête, coude fixe.'},
-      {n:'Rowing haltère 1 bras',d:'3×10/côté'},
-      {n:'Crunches',d:'3×20 — Compression, nuque relâchée.'},
-      {n:'Leg raises',d:'3×15 — Jambes tendues, montée lente.'},
-      {n:'Bicycle crunches',d:'3×20 — Rotation lente et contrôlée.'},
-    ]},
-  ]},
-  {n:2,dates:'2 – 8 juin',theme:'Programme complet',sessions:[
-    {id:'w2s1',type:'combo',title:'Vélo + Upper Body',dur:60,
-     velo:'25 min — 2 min rapide / 1 min modéré ×8. Finir avec 3 min récup.',
-     exercises:[
-      {n:'Développé haltères (sol)',d:'3×10'},
-      {n:'Écarté haltères (sol)',d:'3×12'},
-      {n:'Rowing haltère 1 bras',d:'3×10/côté'},
-      {n:'Curl biceps',d:'3×12'},
-      {n:'Extension triceps',d:'3×12'},
-    ]},
-    {id:'w2s2',type:'muscu',title:'Lower Body + Abdos',dur:45,exercises:[
-      {n:'Squat haltères',d:'3×12 — Dos droit, descente à 90°.'},
-      {n:'Fentes avant',d:'3×10/côté — Grand pas, genou arrière proche sol.'},
-      {n:'Hip thrust haltère',d:'3×15 — Dos sur canapé, poussée explosive.'},
-      {n:'Gainage planche',d:'3×30 sec — Dos plat.'},
-      {n:'Crunches',d:'3×20'},
-      {n:'Russian twist haltère',d:'3×15/côté'},
-    ]},
-    {id:'w2s3',type:'velo',title:'Vélo Zone 2',dur:30,
-     velo:'30 min régulier — Intensité où tu peux encore parler.'},
-    {id:'w2s4',type:'optional',title:'Session Bonus',dur:25,exercises:[
-      {n:'Élévations latérales',d:'3×15'},
-      {n:'Écarté haltères (sol)',d:'3×12'},
-      {n:'Bicycle crunches',d:'3×20'},
-      {n:'Leg raises',d:'3×15'},
-    ]},
-  ]},
-  {n:3,dates:'9 – 15 juin',theme:'Intensification légère',sessions:[
-    {id:'w3s1',type:'combo',title:'Vélo + Upper Body',dur:65,
-     velo:'30 min — 2 min rapide / 1 min modéré ×9.',
-     exercises:[
-      {n:'Développé haltères (sol)',d:'4×10 (+1 série vs S2)'},
-      {n:'Écarté haltères (sol)',d:'3×12'},
-      {n:'Rowing haltère 1 bras',d:'4×10/côté'},
-      {n:'Curl biceps',d:'3×12'},
-      {n:'Élévations latérales',d:'3×15'},
-    ]},
-    {id:'w3s2',type:'muscu',title:'Lower Body + Abdos',dur:50,exercises:[
-      {n:'Squat haltères',d:'4×12'},
-      {n:'Fentes avant',d:'3×12/côté'},
-      {n:'Hip thrust haltère',d:'4×15 — Augmenter le poids.'},
-      {n:'Romanian deadlift',d:'3×12 — Dos plat.'},
-      {n:'Gainage planche',d:'3×40 sec'},
-      {n:'Leg raises',d:'3×15'},
-      {n:'Russian twist',d:'3×15/côté'},
-    ]},
-    {id:'w3s3',type:'velo',title:'Vélo + Abdos express',dur:40,
-     velo:'25 min zone 2',
-     exercises:[
-      {n:'Crunches',d:'3×25'},
-      {n:'Bicycle crunches',d:'3×20'},
-      {n:'Gainage',d:'2×40 sec'},
-    ]},
-    {id:'w3s4',type:'optional',title:'Session Bonus',dur:30,exercises:[
-      {n:'Squat haltères',d:'3×15'},
-      {n:'Hip thrust',d:'3×15'},
-      {n:'Crunches',d:'3×25'},
-      {n:'Bicycle crunches',d:'3×20'},
-    ]},
-  ]},
-  {n:4,dates:'16 – 22 juin',theme:'Mi-programme',sessions:[
-    {id:'w4s1',type:'combo',title:'Vélo HIIT + Pecto/Dos',dur:70,
-     velo:'30 min HIIT — 1 min max / 1 min récup ×10, puis 10 min retour calme.',
-     exercises:[
-      {n:'Développé haltères (sol)',d:'4×12'},
-      {n:'Écarté haltères (sol)',d:'4×12'},
-      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
-      {n:'Extension triceps',d:'3×12'},
-    ]},
-    {id:'w4s2',type:'muscu',title:'Cuisses + Abdos complet',dur:55,exercises:[
-      {n:'Squat haltères',d:'4×12 — Augmenter le poids.'},
-      {n:'Fentes avant',d:'4×10/côté'},
-      {n:'Hip thrust haltère',d:'4×15'},
-      {n:'Romanian deadlift',d:'3×12'},
-      {n:'Gainage planche',d:'4×45 sec'},
-      {n:'Leg raises',d:'4×15'},
-      {n:'Russian twist',d:'3×20/côté'},
-      {n:'Bicycle crunches',d:'3×20'},
-    ]},
-    {id:'w4s3',type:'velo',title:'Vélo endurance',dur:35,velo:'35 min zone 2 continu.'},
-    {id:'w4s4',type:'optional',title:'Session Bonus',dur:35,exercises:[
-      {n:'Écarté haltères (sol)',d:'4×12'},
-      {n:'Curl biceps',d:'3×12'},
-      {n:'Élévations latérales',d:'3×15'},
-      {n:'Circuit abdos',d:'3 tours : gainage 30s + leg raises 15 + bicycle 20'},
-    ]},
-  ]},
-  {n:5,dates:'23 – 29 juin',theme:'Sèche intensive',sessions:[
-    {id:'w5s1',type:'combo',title:'Vélo HIIT + Full Upper',dur:70,
-     velo:'30 min HIIT — 1 min max / 1 min récup ×10.',
-     exercises:[
-      {n:'Développé haltères (sol)',d:'4×12'},
-      {n:'Écarté haltères (sol)',d:'4×12'},
-      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
-      {n:'Curl biceps',d:'3×12'},
-      {n:'Extension triceps',d:'3×12'},
-      {n:'Élévations latérales',d:'3×15'},
-    ]},
-    {id:'w5s2',type:'muscu',title:'Lower Body + Abdos',dur:55,exercises:[
-      {n:'Squat haltères',d:'4×15 — Endurance force.'},
-      {n:'Fentes marchées',d:'3×10/côté'},
-      {n:'Hip thrust haltère',d:'4×20'},
-      {n:'Romanian deadlift',d:'4×12'},
-      {n:'Gainage planche',d:'4×50 sec'},
-      {n:'Leg raises',d:'4×15'},
-      {n:'Russian twist',d:'4×20/côté'},
-    ]},
-    {id:'w5s3',type:'velo',title:'Vélo endurance',dur:40,velo:'40 min zone 2.'},
-    {id:'w5s4',type:'optional',title:'Circuit Bonus',dur:35,exercises:[
-      {n:'Circuit full body',d:'4 rounds : Squat×15 / Hip thrust×15 / Développé×12 / Abdos×20'},
-    ]},
-  ]},
-  {n:6,dates:'30 juin – 6 juillet',theme:'Peak',sessions:[
-    {id:'w6s1',type:'combo',title:'Vélo Max + Upper',dur:75,
-     velo:'35 min HIIT — 1 min max / 45 sec récup ×15.',
-     exercises:[
-      {n:'Développé haltères (sol)',d:'5×10'},
-      {n:'Écarté haltères (sol)',d:'4×12'},
-      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
-      {n:'Curl biceps',d:'3×12'},
-      {n:'Extension triceps',d:'3×12'},
-    ]},
-    {id:'w6s2',type:'muscu',title:'Cuisses/Fessiers + Abdos max',dur:60,exercises:[
-      {n:'Squat haltères',d:'5×12 — Charge maximale.'},
-      {n:'Fentes marchées',d:'3×12/côté'},
-      {n:'Hip thrust haltère',d:'5×15 — Charge maximale.'},
-      {n:'Romanian deadlift',d:'4×12'},
-      {n:'Gainage planche',d:'4×60 sec'},
-      {n:'Leg raises',d:'4×20'},
-      {n:'Russian twist',d:'4×20/côté'},
-      {n:'Bicycle crunches',d:'4×25'},
-    ]},
-    {id:'w6s3',type:'velo',title:'Vélo endurance finale',dur:40,velo:'40 min zone 2.'},
-    {id:'w6s4',type:'optional',title:'Circuit Sèche',dur:40,exercises:[
-      {n:'Circuit intensif',d:'5 rounds : Squat×15 / Hip thrust×20 / Développé×10 / Gainage 45s / Leg raises×15'},
-    ]},
-  ]},
-  {n:7,dates:'7 – 14 juillet',theme:'Finition',sessions:[
-    {id:'w7s1',type:'combo',title:'Vélo + Full Upper',dur:65,velo:'30 min HIIT.',exercises:[
-      {n:'Développé haltères (sol)',d:'4×12'},
-      {n:'Écarté haltères (sol)',d:'4×12'},
-      {n:'Rowing haltère 1 bras',d:'4×12/côté'},
-      {n:'Curl biceps',d:'3×12'},
-      {n:'Extension triceps',d:'3×12'},
-    ]},
-    {id:'w7s2',type:'muscu',title:'Full Body + Abdos final',dur:55,exercises:[
-      {n:'Squat haltères',d:'4×15'},
-      {n:'Hip thrust haltère',d:'4×20'},
-      {n:'Développé haltères (sol)',d:'3×12'},
-      {n:'Rowing haltère 1 bras',d:'3×12/côté'},
-      {n:'Gainage planche',d:'4×60 sec'},
-      {n:'Leg raises',d:'4×20'},
-      {n:'Bicycle crunches',d:'4×25'},
-    ]},
-    {id:'w7s3',type:'velo',title:'Dernier Vélo',dur:35,velo:'35 min zone 2.'},
-  ]},
+  {n:1,dates:'26 mai – 1er juin',theme:'Semaine 1',alert:'Cheville — pas de vélo ni gainage cette semaine.'},
+  {n:2,dates:'2 – 8 juin',theme:'Semaine 2'},
+  {n:3,dates:'9 – 15 juin',theme:'Semaine 3'},
+  {n:4,dates:'16 – 22 juin',theme:'Semaine 4'},
+  {n:5,dates:'23 – 29 juin',theme:'Semaine 5'},
+  {n:6,dates:'30 juin – 6 juillet',theme:'Semaine 6'},
+  {n:7,dates:'7 – 14 juillet',theme:'Semaine 7'},
 ];
 
 const NUTRITION={
@@ -409,17 +232,15 @@ function getWeekDates(wn){
   return Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(d.getDate()+i);return d;});
 }
 
-function getSD(id){return S.sessionDates[id]||DEFAULT_DATES[id]||'';}
-function getAllPS(){return WEEKS.flatMap(w=>w.sessions);}
+function getSD(id){return S.sessionDates[id]||'';}
+function getAllPS(){return [];}
 function getSessions4Date(ds){
-  return [...getAllPS().filter(s=>getSD(s.id)===ds),...S.customSessions.filter(s=>s.date===ds)];
+  return S.customSessions.filter(s=>s.date===ds);
 }
-function findSess(id){
-  if(String(id).startsWith('c_'))return S.customSessions.find(s=>s.id===id);
-  return getAllPS().find(s=>s.id===id);
-}
-function totalPl(){return WEEKS.reduce((a,w)=>a+w.sessions.filter(s=>s.type!=='optional').length,0);}
-function totalDn(){return Object.values(S.done).filter(Boolean).length;}
+function findSess(id){return S.customSessions.find(s=>s.id===id);}
+function saveDur(id,val){const v=parseInt(val);if(!isNaN(v)&&v>4){const s=findSess(id);if(s){s.dur=v;saveS();const el=document.querySelector(`[data-id="${id}"] .sb-dur`);if(el)el.textContent=v+' min';}}}
+function totalPl(){return S.customSessions.length;}
+function totalDn(){return S.customSessions.filter(s=>S.done[s.id]).length;}
 
 /* ══ DRAG & DROP ══ */
 let dragId=null;
@@ -539,7 +360,11 @@ function openSess(id){
     <div class="m-sess-title">${s.title}</div>
     <div class="m-date-row">
       <span class="m-date-link" onclick="openDP('${id}')">${fmtDate(sd)}</span>
-      <span>${s.dur||'?'} min</span>
+      <span style="display:flex;align-items:center;gap:4px">
+        <input type="number" value="${s.dur||''}" min="5" max="300" placeholder="?" 
+          style="width:52px;padding:3px 7px;border:1px solid var(--brd);border-radius:5px;font-size:13px;font-family:var(--f);outline:none"
+          onchange="saveDur('${id}',this.value)"> min
+      </span>
     </div>
     ${s.velo?`<div class="velo-blk">🚴 ${s.velo}</div>`:''}
     ${exoH}
@@ -732,10 +557,12 @@ function renderPoids(){
   const cw=getCurrentWeek();
   let rows=WEEKS.map(w=>{
     const isCur=w.n===cw,isPast=w.n<cw,rec=S.weights[w.n];
+    const mon=new Date(PROG_START);mon.setDate(mon.getDate()+(w.n-1)*7);
+    const monLbl=mon.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     return `<div class="wt-row">
       <div class="wt-wk">
         <div class="wt-wk-n" style="color:${isCur?'var(--grn)':isPast?'var(--t)':'var(--t3)'}">${isCur?'● ':''}S.${w.n}</div>
-        <div class="wt-wk-d">${w.dates.split('–')[0].trim()}</div>
+        <div class="wt-wk-d">${monLbl}</div>
       </div>
       <input type="number" step="0.1" min="50" max="150"
         class="wt-inp${isCur?' cur':''}" placeholder="— kg" value="${rec||''}"
@@ -746,7 +573,7 @@ function renderPoids(){
 
   let h=`
     <p style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px">Pesée hebdomadaire</p>
-    <p style="font-size:12px;color:var(--t2);font-style:italic;line-height:1.6;margin-bottom:16px">Pèse-toi le lundi matin à jeun, toujours dans les mêmes conditions.</p>
+    <p style="font-size:12px;color:var(--t2);font-style:italic;line-height:1.6;margin-bottom:16px">Pèse-toi le lundi matin à jeun, toujours dans les mêmes conditions. Chaque semaine affiche son lundi de pesée.</p>
     ${rows}
     <div class="chart-wrap">
       <div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Courbe de poids</div>
