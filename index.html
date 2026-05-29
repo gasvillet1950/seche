@@ -259,13 +259,13 @@ const WEEKLY_TARGET=DAILY_TARGET*7;
 const TODAY=(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})();
 
 const TYPES={
-  muscu:  {icon:'💪',label:'Musculation',col:'#2E7D5A',bg:'#F0F8F4',brd:'#B8D9CB',burn:280},
-  velo:   {icon:'🚴',label:'Cardio Vélo',col:'#2B5EA7',bg:'#F0F4FB',brd:'#B0C4E8',burn:750},
-  combo:  {icon:'⚡',label:'Combo',      col:'#7A4E2D',bg:'#FDF6F1',brd:'#E8C8A8',burn:900},
-  optional:{icon:'⭐',label:'Bonus',     col:'#8B6914',bg:'#FDF8EC',brd:'#DCC87A',burn:150},
-  foot:   {icon:'⚽',label:'Football',   col:'#C05E1A',bg:'#FDF4EC',brd:'#F0C8A0',burn:650},
-  run:    {icon:'🏃',label:'Course',     col:'#1A7A7A',bg:'#EBF8F8',brd:'#A0D8D8',burn:420},
-  tennis: {icon:'🎾',label:'Tennis',     col:'#5A2E7D',bg:'#F4F0F8',brd:'#C8B0E0',burn:500},
+  muscu:  {icon:'💪',label:'Musculation',col:'#2E7D5A',bg:'#F0F8F4',brd:'#B8D9CB',burn:280,burnPerMin:6.2},
+  velo:   {icon:'🚴',label:'Cardio Vélo',col:'#2B5EA7',bg:'#F0F4FB',brd:'#B0C4E8',burn:750,burnPerMin:16.7},
+  combo:  {icon:'⚡',label:'Combo',      col:'#7A4E2D',bg:'#FDF6F1',brd:'#E8C8A8',burn:900,burnPerMin:15.0},
+  optional:{icon:'⭐',label:'Bonus',     col:'#8B6914',bg:'#FDF8EC',brd:'#DCC87A',burn:150,burnPerMin:6.7},
+  foot:   {icon:'⚽',label:'Football',   col:'#C05E1A',bg:'#FDF4EC',brd:'#F0C8A0',burn:650,burnPerMin:10.8},
+  run:    {icon:'🏃',label:'Course',     col:'#1A7A7A',bg:'#EBF8F8',brd:'#A0D8D8',burn:420,burnPerMin:14.0},
+  tennis: {icon:'🎾',label:'Tennis',     col:'#5A2E7D',bg:'#F4F0F8',brd:'#C8B0E0',burn:500,burnPerMin:8.3},
 };
 
 const ECART_KCAL={
@@ -316,8 +316,20 @@ let S={
   sessionNotes:{},  // {sessId: string}
 };
 
-function loadS(){try{const s=localStorage.getItem('seche2026v2');if(s)Object.assign(S,JSON.parse(s));}catch(e){}}
-function saveS(){try{localStorage.setItem('seche2026v2',JSON.stringify(S));}catch(e){}}
+function loadS(){
+  try {
+    // Clé stable — migration automatique depuis anciennes versions
+    const KEYS=['seche_app','seche2026v2','seche2026'];
+    let raw=null;
+    for(const k of KEYS){raw=localStorage.getItem(k);if(raw)break;}
+    if(raw){
+      const parsed=JSON.parse(raw);
+      Object.assign(S,parsed);
+      saveS(); // re-save sous la clé stable
+    }
+  } catch(e){console.warn('Erreur chargement:',e);}
+}
+function saveS(){try{localStorage.setItem('seche_app',JSON.stringify(S));}catch(e){console.warn('Erreur sauvegarde:',e);}}
 
 /* ══ ADAPTIVE THEME ══ */
 function applyTheme(){
@@ -362,7 +374,11 @@ function calcWeekKcal(wn){
   const ecartKcal=ecartsThisWeek.reduce((a,e)=>a+(ECART_KCAL[e.type]||0),0);
   // Sessions burn
   const sessThisWeek=S.customSessions.filter(s=>range.includes(s.date)&&S.done[s.id]);
-  const burnKcal=sessThisWeek.reduce((a,s)=>a+(TYPES[s.type]?.burn||200),0);
+  const burnKcal=sessThisWeek.reduce((a,s)=>{
+    const bpm=TYPES[s.type]?.burnPerMin||10;
+    const dur=s.dur||45; // durée par défaut 45min si non renseignée
+    return a+Math.round(bpm*dur);
+  },0);
   // Meal surplus
   const mealSurplus=range.reduce((a,ds)=>{
     const m=S.meals[ds]||{};
